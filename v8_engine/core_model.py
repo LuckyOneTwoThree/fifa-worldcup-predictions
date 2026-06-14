@@ -10,14 +10,13 @@ from sklearn.pipeline import make_pipeline
 
 def get_k_factor(tournament):
     if 'World Cup' in tournament and 'Qualification' not in tournament: return 60
-    elif 'Continental' in tournament: return 40
+    elif tournament in ['UEFA Euro', 'Copa América', 'African Cup of Nations', 'AFC Asian Cup', 'CONCACAF Championship']: return 40
     elif 'Qualification' in tournament: return 30
     else: return 20
 
-def train_v7_models(df, squad_dict, tac_dict, target_date=None):
+def train_v8_models(df, squad_dict, tac_dict):
     """
-    Trains the V7 Dual-Engine ML Pipeline.
-    If target_date is provided, cuts off training data strictly before this date (for Blind Backtest).
+    Trains the V8 Dual-Engine ML Pipeline.
     Returns:
     - calibrated_stack: classification model for Win/Draw/Loss
     - xg_model_home: Poisson regressor for home xG
@@ -25,9 +24,7 @@ def train_v7_models(df, squad_dict, tac_dict, target_date=None):
     - elo_dict: final elo ratings at cutoff
     """
     
-    if target_date is not None:
-        df = df[df['date'] < pd.to_datetime(target_date)].copy()
-        
+
     elo_dict = {}
     train_data = []
     
@@ -57,7 +54,7 @@ def train_v7_models(df, squad_dict, tac_dict, target_date=None):
         if t2 not in elo_dict: elo_dict[t2] = 1500
         elo1, elo2 = elo_dict[t1], elo_dict[t2]
         
-        # Build training set using V7 rules
+        # Build training set using V8 rules
         if tournament in major_tournaments and row['date'].year >= 2010:
             sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
             
@@ -109,7 +106,6 @@ def train_v7_models(df, squad_dict, tac_dict, target_date=None):
         estimators=[('xgb', xgb_base), ('rf', rf_base), ('mlp', mlp_base)],
         final_estimator=LogisticRegression(), cv=3
     )
-    stacking_clf.fit(X_train, y_train)
     calibrated_stack = CalibratedClassifierCV(stacking_clf, method='sigmoid', cv=3)
     calibrated_stack.fit(X_train, y_train)
     

@@ -1,13 +1,51 @@
-# Python caches
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Editor/IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # System
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Vite
+.vite/
+
+# Temporary / Generated files
+tmp/
+v8_engine/tmp/
+*_Ultimate_Context.md
+
+# Test outputs
+news_results.json
+fetch_news.py
+
+# Large data files (use Git LFS or download separately)
+# Uncomment if you don't want to track these:
+# results.csv
+# v8_engine/data_scrapers/xg_history.csv
+
+# OS
+*.tmp
+*.bak

@@ -8,14 +8,21 @@ from sklearn.calibration import CalibratedClassifierCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 import math
-import random
+from core_model import train_v8_models, get_k_factor
+from sklearn.metrics import brier_score_loss
+
 from datetime import datetime, timedelta
 import os
 
-def poisson_prob(l, k):
-    return (math.exp(-l) * (l ** k)) / math.factorial(k)
+def dixon_coles_prob(l1, l2, k1, k2, rho=0.0):
+    prob = (math.exp(-l1) * (l1 ** k1) / math.factorial(k1)) * (math.exp(-l2) * (l2 ** k2) / math.factorial(k2))
+    if k1 == 0 and k2 == 0: return prob * (1 - l1*l2*rho)
+    elif k1 == 0 and k2 == 1: return prob * (1 + l1*rho)
+    elif k1 == 1 and k2 == 0: return prob * (1 + l2*rho)
+    elif k1 == 1 and k2 == 1: return prob * (1 - rho)
+    return prob
 
-print("Loading V4 Pre-Match Ultimate Engine for Blind Backtest...")
+print("Loading V8.0 Pre-Match Ultimate Engine for Blind Backtest...")
 
 df = pd.read_csv('../results.csv')
 squad_vals = pd.read_csv('data_scrapers/squad_values.csv')
@@ -56,15 +63,15 @@ zh_translation = {
     'Germany': '德国', 'Curaçao': '库拉索', 'Ivory Coast': '科特迪瓦', 'Ecuador': '厄瓜多尔',
     'Netherlands': '荷兰', 'Japan': '日本', 'Sweden': '瑞典', 'Tunisia': '突尼斯',
     'Qatar': '卡塔尔', 'Switzerland': '瑞士', 'Brazil': '巴西', 'Morocco': '摩洛哥',
-    'Haiti': '海地', 'Scotland': '苏格兰', 'Australia': '澳大利亚', 'Turkey': '土耳其'
+    'Haiti': '海地', 'Scotland': '苏格兰', 'Australia': '澳大利亚', 'Turkey': '土耳其',
+    'Belgium': '比利时', 'Egypt': '埃及', 'Iran': '伊朗', 'New Zealand': '新西兰',
+    'Spain': '西班牙', 'Cape Verde': '佛得角', 'Saudi Arabia': '沙特阿拉伯', 'Uruguay': '乌拉圭',
+    'Argentina': '阿根廷', 'Portugal': '葡萄牙', 'Croatia': '克罗地亚', 'Senegal': '塞内加尔',
+    'France': '法国', 'England': '英格兰'
 }
 def t(name): return zh_translation.get(name, name)
 
-def get_k_factor(tournament):
-    if 'World Cup' in tournament and 'Qualification' not in tournament: return 60
-    elif 'Continental' in tournament: return 40
-    elif 'Qualification' in tournament: return 30
-    else: return 20
+global_metrics_data = []
 
 def run_blind_prediction(target_date_str):
     target_date_dt = pd.to_datetime(target_date_str)
@@ -75,61 +82,7 @@ def run_blind_prediction(target_date_str):
     elo_dict = {}
     wc_data = []
     
-    for index, row in past_df.iterrows():
-        t1, t2 = map_name(row['home_team']), map_name(row['away_team'])
-        s1, s2 = row['home_score'], row['away_score']
-        tournament = row['tournament']
-        if pd.isna(s1) or pd.isna(s2): continue
-        s1, s2 = int(s1), int(s2)
-        
-        if t1 not in elo_dict: elo_dict[t1] = 1500
-        if t2 not in elo_dict: elo_dict[t2] = 1500
-        elo1, elo2 = elo_dict[t1], elo_dict[t2]
-        
-        # Only use previous world cups for training
-        if tournament == 'FIFA World Cup' and row['date'].year in [2014, 2018, 2022]:
-            sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
-            tac1 = tac_dict.get(t1, {"aerial_win_rate": 50.0, "ppda": 12.0})
-            tac2 = tac_dict.get(t2, {"aerial_win_rate": 50.0, "ppda": 12.0})
-            aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
-            ppda_diff = tac1['ppda'] - tac2['ppda']
-            strictness = np.random.uniform(0.3, 0.9)
-            result = 1 if s1 > s2 else (0 if s1 == s2 else -1)
-            wc_data.append({
-                'team1': t1, 'team2': t2,
-                'elo_diff': elo1 - elo2, 'sv_diff': sv1 - sv2,
-                'aerial_diff': aerial_diff, 'ppda_diff': ppda_diff,
-                'strict_ref': strictness, 'result': result
-            })
-            
-        we1 = 1 / (10 ** ((elo2 - elo1) / 400) + 1)
-        we2 = 1 / (10 ** ((elo1 - elo2) / 400) + 1)
-        w1 = 1 if s1 > s2 else (0.5 if s1 == s2 else 0)
-        w2 = 1 if s2 > s1 else (0.5 if s1 == s2 else 0)
-        
-        k = get_k_factor(tournament)
-        gd = abs(s1 - s2)
-        if gd <= 1: g = 1
-        elif gd == 2: g = 1.5
-        else: g = (11 + gd) / 8.0
-            
-        elo_dict[t1] = elo1 + k * g * (w1 - we1)
-        elo_dict[t2] = elo2 + k * g * (w2 - we2)
-
-    # Train Model (100% blind to future)
-    train_df = pd.DataFrame(wc_data).fillna(0)
-    features = ['elo_diff', 'sv_diff', 'aerial_diff', 'ppda_diff', 'strict_ref']
-    X_train = train_df[features]
-    y_train = train_df['result'] + 1
-    
-    xgb_base = xgb.XGBClassifier(objective='multi:softprob', num_class=3, eval_metric='mlogloss', seed=42)
-    rf_base = RandomForestClassifier(n_estimators=100, random_state=42)
-    mlp_base = make_pipeline(StandardScaler(), MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=500, random_state=42))
-
-    stacking_clf = StackingClassifier(estimators=[('xgb', xgb_base), ('rf', rf_base), ('mlp', mlp_base)], final_estimator=LogisticRegression(), cv=3)
-    stacking_clf.fit(X_train, y_train)
-    calibrated_stack = CalibratedClassifierCV(stacking_clf, method='sigmoid', cv=3)
-    calibrated_stack.fit(X_train, y_train)
+    calibrated_stack, xg_model_home, xg_model_away, elo_dict = train_v8_models(past_df, squad_dict, tac_dict)
     
     # Predict Target Date
     target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
@@ -137,11 +90,15 @@ def run_blind_prediction(target_date_str):
     beijing_date_str = beijing_date.strftime('%Y-%m-%d')
     
     output_md = f"# 📅 北京时间：{beijing_date_str} (美洲当地 {target_date.month}-{target_date.day})\n"
-    output_md += f"## 📊 V6.0 全息量化预测 (绝对盲测版)\n\n"
+    output_md += f"## 📊 V8.0 全息量化预测 (绝对盲测版)\n\n"
     output_md += "> [!IMPORTANT]\n> 本预测文件在生成时，底层切断了所有该日及该日之后的真实数据，确保 Elo 积分和机器学习权重处于**绝对盲测状态 (Blind Test)**，不含任何后见之明。\n\n"
     
     upcoming = df[df['date'] == target_date_str]
-    referees = ["Mateu Lahoz (Mock)", "Michael Oliver", "Wilton Sampaio", "Daniele Orsato", "Szymon Marciniak"]
+    referees = [
+    "Michael Oliver", "Wilton Sampaio", "Daniele Orsato", "Szymon Marciniak",
+    "Anthony Taylor", "Clement Turpin", "Danny Makkelie", "Slavko Vincic",
+    "Facundo Tello", "Cesar Ramos", "Fernando Rapallini", "Ivan Barton"
+]
     
     for _, row in upcoming.iterrows():
         t1, t2 = map_name(row['home_team']), map_name(row['away_team'])
@@ -153,40 +110,46 @@ def run_blind_prediction(target_date_str):
         aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
         ppda_diff = tac1['ppda'] - tac2['ppda']
         
-        assigned_ref = random.choice(referees)
+        assigned_ref = referees[sum(ord(c) for c in t1+t2) % len(referees)]
         strictness = ref_dict[assigned_ref]['strictness_index']
         
         X_pred = pd.DataFrame({
-            'elo_diff': [e1 - e2], 'sv_diff': [sv1 - sv2],
-            'aerial_diff': [aerial_diff], 'ppda_diff': [ppda_diff],
-            'strict_ref': [strictness]
+            'elo_diff': [e1 - e2],
+            'sv_diff': [sv1 - sv2],
+            'aerial_diff': [aerial_diff],
+            'ppda_diff': [ppda_diff],
+            't_weight': [get_k_factor(row['tournament'])]
         })
         
         probs = calibrated_stack.predict_proba(X_pred)[0]
-        p_away_model, p_draw_model, p_home_model = probs[0], probs[1], probs[2]
+        p_away_ml, p_draw_ml, p_home_ml = probs[0], probs[1], probs[2]
         
-        base_xg = 1.1
-        xg1_pred = base_xg + (p_home_model - p_away_model) * 1.5 + (sv1 / 1000.0) + (aerial_diff * 0.05) + (strictness * 0.2)
-        xg2_pred = base_xg + (p_away_model - p_home_model) * 1.5 + (sv2 / 1000.0) - (aerial_diff * 0.02) + (strictness * 0.1)
-        xg1_pred = max(0.3, xg1_pred)
-        xg2_pred = max(0.3, xg2_pred)
+        xg1_pred = max(0.1, min(float(xg_model_home.predict(X_pred)[0]), 6.0))
+        xg2_pred = max(0.1, min(float(xg_model_away.predict(X_pred)[0]), 6.0))
+
         
         # V5 Unified Math: Calculate true W/D/L probabilities from Poisson matrix
-        p_win, p_draw, p_loss = 0.0, 0.0, 0.0
-        score_probs = []
-        for i in range(10):
-            for j in range(10):
-                prob = poisson_prob(xg1_pred, i) * poisson_prob(xg2_pred, j)
-                if i > j: p_win += prob
-                elif i == j: p_draw += prob
-                else: p_loss += prob
-                if i < 5 and j < 5:
-                    score_probs.append({"score": f"{i}-{j}", "prob": prob})
+        p_win_poisson, p_draw_poisson, p_loss_poisson = 0.0, 0.0, 0.0
+        score_probs_all = []
+        for i in range(15):
+            for j in range(15):
+                prob = dixon_coles_prob(xg1_pred, xg2_pred, i, j, rho=-0.05)
+                if i > j: p_win_poisson += prob
+                elif i == j: p_draw_poisson += prob
+                else: p_loss_poisson += prob
+                if i < 10 and j < 10:
+                    score_probs_all.append({"score": f"{i}-{j}", "prob": prob})
                     
-        total_p = p_win + p_draw + p_loss
-        p_home, p_draw, p_away = p_win/total_p, p_draw/total_p, p_loss/total_p
+        total_p = p_win_poisson + p_draw_poisson + p_loss_poisson
+        p_win_poisson /= total_p
+        p_draw_poisson /= total_p
+        p_loss_poisson /= total_p
         
-        score_probs = sorted(score_probs, key=lambda x: x["prob"], reverse=True)[:3]
+        p_home = p_home_ml * 0.3 + p_win_poisson * 0.7
+        p_draw = p_draw_ml * 0.3 + p_draw_poisson * 0.7
+        p_away = p_away_ml * 0.3 + p_loss_poisson * 0.7
+        
+        score_probs = sorted(score_probs_all, key=lambda x: x["prob"], reverse=True)[:3]
         
         # Asian Handicap & Over/Under
         diff = xg1_pred - xg2_pred
@@ -243,8 +206,10 @@ def run_blind_prediction(target_date_str):
             
         output_md += f"- **裁判因素 (Referee Factor)**：{assigned_ref} (严厉指数: {strictness})\n"
         if disc_warning: output_md += disc_warning
+        global_metrics_data.append({'actual_s1': row['home_score'], 'actual_s2': row['away_score'], 'p_home': p_home, 'p_draw': p_draw, 'p_away': p_away, 'score_probs': score_probs_all})
+
         
-        output_md += f"- **V5 数学统一胜率 (基于泊松积分)**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
+        output_md += f"- **V8 双模加权统一胜率 (基于泊松积分)**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
         output_md += f"- **火力指征 (xG)**：{xg1_pred:.2f} - {xg2_pred:.2f}\n"
         output_md += f"- **🎲 机器推演盘口**：\n"
         output_md += f"  - **理论亚盘**：{ah_str}\n"
@@ -285,3 +250,41 @@ def run_blind_prediction(target_date_str):
 
 run_blind_prediction('2026-06-11')
 run_blind_prediction('2026-06-12')
+
+print("\n--- 📈 V8.0 Quantitative Backtest Metrics ---")
+if len(global_metrics_data) > 0:
+    import numpy as np
+    y_true = []
+    y_prob = []
+    hits = 0
+    exact_hits = 0
+    top3_hits = 0
+    for m in global_metrics_data:
+        s1, s2 = m['actual_s1'], m['actual_s2']
+        if pd.isna(s1) or pd.isna(s2): continue
+        s1, s2 = int(s1), int(s2)
+        res = 2 if s1 > s2 else (1 if s1 == s2 else 0)
+        y_true.append(res)
+        y_prob.append([m['p_away'], m['p_draw'], m['p_home']])
+        
+        pred_res = np.argmax([m['p_away'], m['p_draw'], m['p_home']])
+        if pred_res == res: hits += 1
+        
+        actual_score = f"{s1}-{s2}"
+        top_scores = sorted(m['score_probs'], key=lambda x: x['prob'], reverse=True)
+        if top_scores[0]['score'] == actual_score: exact_hits += 1
+        if actual_score in [x['score'] for x in top_scores[:3]]: top3_hits += 1
+        
+    if len(y_true) > 0:
+        
+        y_true_onehot = np.zeros((len(y_true), 3))
+        for idx, val in enumerate(y_true):
+            y_true_onehot[idx, val] = 1.0
+        brier = np.mean(np.sum((np.array(y_prob) - y_true_onehot)**2, axis=1))
+        print(f"Matches Evaluated: {len(y_true)}")
+        print(f"W/D/L Accuracy: {hits/len(y_true)*100:.1f}%")
+        print(f"Brier Score (Log-Loss proxy): {brier:.4f}")
+        print(f"Exact Score Hit Rate (Top 1): {exact_hits/len(y_true)*100:.1f}%")
+        print(f"Top 3 Score Coverage: {top3_hits/len(y_true)*100:.1f}%")
+else:
+    print("No actual results found to evaluate.")
