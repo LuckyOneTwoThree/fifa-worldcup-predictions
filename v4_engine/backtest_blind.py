@@ -163,20 +163,41 @@ def run_blind_prediction(target_date_str):
         })
         
         probs = calibrated_stack.predict_proba(X_pred)[0]
-        p_away, p_draw, p_home = probs[0], probs[1], probs[2]
+        p_away_model, p_draw_model, p_home_model = probs[0], probs[1], probs[2]
         
         base_xg = 1.1
-        xg1_pred = base_xg + (p_home - p_away) * 1.5 + (sv1 / 1000.0) + (aerial_diff * 0.05) + (strictness * 0.2)
-        xg2_pred = base_xg + (p_away - p_home) * 1.5 + (sv2 / 1000.0) - (aerial_diff * 0.02) + (strictness * 0.1)
+        xg1_pred = base_xg + (p_home_model - p_away_model) * 1.5 + (sv1 / 1000.0) + (aerial_diff * 0.05) + (strictness * 0.2)
+        xg2_pred = base_xg + (p_away_model - p_home_model) * 1.5 + (sv2 / 1000.0) - (aerial_diff * 0.02) + (strictness * 0.1)
         xg1_pred = max(0.3, xg1_pred)
         xg2_pred = max(0.3, xg2_pred)
         
+        # V5 Unified Math: Calculate true W/D/L probabilities from Poisson matrix
+        p_win, p_draw, p_loss = 0.0, 0.0, 0.0
         score_probs = []
-        for i in range(5):
-            for j in range(5):
+        for i in range(10):
+            for j in range(10):
                 prob = poisson_prob(xg1_pred, i) * poisson_prob(xg2_pred, j)
-                score_probs.append({"score": f"{i}-{j}", "prob": prob})
+                if i > j: p_win += prob
+                elif i == j: p_draw += prob
+                else: p_loss += prob
+                if i < 5 and j < 5:
+                    score_probs.append({"score": f"{i}-{j}", "prob": prob})
+                    
+        total_p = p_win + p_draw + p_loss
+        p_home, p_draw, p_away = p_win/total_p, p_draw/total_p, p_loss/total_p
+        
         score_probs = sorted(score_probs, key=lambda x: x["prob"], reverse=True)[:3]
+        
+        # Asian Handicap & Over/Under
+        diff = xg1_pred - xg2_pred
+        hc = round(diff / 0.25) * 0.25
+        if hc == 0: ah_str = "平手盘 (0)"
+        elif hc > 0: ah_str = f"主让 {hc} 球" if hc % 0.5 == 0 else f"主让 {hc-0.25}/{hc+0.25} 球"
+        else: ah_str = f"受让 {abs(hc)} 球" if abs(hc) % 0.5 == 0 else f"受让 {abs(hc)-0.25}/{abs(hc)+0.25} 球"
+        
+        total_xg = xg1_pred + xg2_pred
+        ou = round(total_xg / 0.25) * 0.25
+        ou_str = f"{ou} 球" if ou % 0.5 == 0 else f"{ou-0.25}/{ou+0.25} 球"
         
         output_md += f"### ⚔️ {t(t1)} vs {t(t2)}\n"
         output_md += f"- **身价对比**：€{sv1}m vs €{sv2}m\n"
@@ -194,14 +215,18 @@ def run_blind_prediction(target_date_str):
         elif ppda_diff < -3:
             output_md += f"  - ⚠️ {t(t1)} 逼抢极其凶狠，{t(t2)} 的出球将面临巨大压力\n"
         
-        output_md += f"- **V4 真实胜率**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
+        output_md += f"- **V5 数学统一胜率 (基于泊松积分)**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
         output_md += f"- **火力指征 (xG)**：{xg1_pred:.2f} - {xg2_pred:.2f}\n"
+        output_md += f"- **🎲 机器推演盘口**：\n"
+        output_md += f"  - **理论亚盘**：{ah_str}\n"
+        output_md += f"  - **理论大小球**：{ou_str}\n\n"
         
         output_md += "#### 💡 操盘手点评与推荐\n"
-        if p_home > 0.55: recommendation = f"推荐【{t(t1)} 独赢】，战术和身价双重压制。"
-        elif p_away > 0.55: recommendation = f"推荐【{t(t2)} 独赢】，战术和身价双重压制。"
-        elif p_draw > 0.25: recommendation = "推荐【平局】，战术僵持不下，平局性价比最高。"
-        else: recommendation = "战局混乱，推荐关注【波胆或进球数】。"
+        if hc >= 1.0: recommendation = f"推荐【{t(t1)} 独赢及赢盘】，绝对实力压制，穿盘概率极高。"
+        elif hc <= -1.0: recommendation = f"推荐【{t(t2)} 独赢及赢盘】，绝对实力压制，穿盘概率极高。"
+        elif p_home > 0.45: recommendation = f"推荐【{t(t1)} 独赢或亚盘主队】，占据主动，但需防小胜赢球输盘。"
+        elif p_away > 0.45: recommendation = f"推荐【{t(t2)} 独赢或亚盘客队】，占据主动，防冷平。"
+        else: recommendation = f"战局胶着，亚盘指向 {ah_str}，建议直接搏【平局】或去【小球】。"
         
         output_md += f"📝 {recommendation}\n\n"
         
