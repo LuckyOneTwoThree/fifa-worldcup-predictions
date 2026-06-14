@@ -347,6 +347,14 @@ MIT License
 
 ---
 
+## 👤 作者
+
+**LuckyOneTwoThree** — [GitHub](https://github.com/LuckyOneTwoThree)
+
+出于对量化分析和足球数据的兴趣，构建了这套预测系统。欢迎交流算法思路。
+
+---
+
 ## 🙏 致谢
 
 - [Elo Rating System](https://en.wikipedia.org/wiki/Elo_rating_system) — Arpad Elo
