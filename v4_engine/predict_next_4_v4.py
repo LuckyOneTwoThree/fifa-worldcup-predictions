@@ -114,7 +114,7 @@ target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
 beijing_date = target_date + timedelta(days=1)
 beijing_date_str = beijing_date.strftime('%Y-%m-%d')
 
-output_md = f"# 🔮 V5.0 Pre-Match Ultimate: 战术前瞻\n\n"
+output_md = f"# 🔮 V6.0 Pre-Match Ultimate: 战术全息透视\n\n"
 output_md += f"**比赛官方当地时间**：{target_date_str}\n"
 output_md += f"**🌏 换算北京时间 (UTC+8)**：{beijing_date_str} (凌晨/清晨)\n\n"
 output_md += "本预测已完全加载**「裁判严格度」**与**「战术相克矩阵」**，并在底层彻底实现 xG 与胜负概率的泊松积分数学闭环。\n\n"
