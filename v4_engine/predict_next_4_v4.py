@@ -42,6 +42,16 @@ wc_data = []
 name_mapping = {'South Korea': 'South Korea', 'Korea Republic': 'South Korea', 'USA': 'USA', 'United States': 'USA'}
 def map_name(name): return name_mapping.get(name, name)
 
+zh_translation = {
+    'Mexico': '墨西哥', 'South Africa': '南非', 'South Korea': '韩国', 'Czech Republic': '捷克',
+    'Canada': '加拿大', 'Bosnia and Herzegovina': '波黑', 'USA': '美国', 'Paraguay': '巴拉圭',
+    'Germany': '德国', 'Curaçao': '库拉索', 'Ivory Coast': '科特迪瓦', 'Ecuador': '厄瓜多尔',
+    'Netherlands': '荷兰', 'Japan': '日本', 'Sweden': '瑞典', 'Tunisia': '突尼斯',
+    'Qatar': '卡塔尔', 'Switzerland': '瑞士', 'Brazil': '巴西', 'Morocco': '摩洛哥',
+    'Haiti': '海地', 'Scotland': '苏格兰', 'Australia': '澳大利亚', 'Turkey': '土耳其'
+}
+def t(name): return zh_translation.get(name, name)
+
 for index, row in df.iterrows():
     t1, t2 = map_name(row['home_team']), map_name(row['away_team'])
     s1, s2 = row['home_score'], row['away_score']
@@ -147,28 +157,28 @@ for _, row in upcoming.iterrows():
             score_probs.append({"score": f"{i}-{j}", "prob": prob})
     score_probs = sorted(score_probs, key=lambda x: x["prob"], reverse=True)[:3]
     
-    output_md += f"## ⚔️ {t1} vs {t2}\n"
+    output_md += f"## ⚔️ {t(t1)} vs {t(t2)}\n"
     output_md += f"- **身价对比**：€{sv1}m vs €{sv2}m\n"
     output_md += f"- **模拟主裁**：{assigned_ref} (严厉指数: {strictness})\n"
     output_md += f"- **核心战术博弈 (Tactical Mismatch)**：\n"
     if aerial_diff > 5:
-        output_md += f"  - ⚠️ {t1} 在高空争顶上占据绝对碾压优势 (+{aerial_diff:.1f}%)\n"
+        output_md += f"  - ⚠️ {t(t1)} 在高空争顶上占据绝对碾压优势 (+{aerial_diff:.1f}%)\n"
     elif aerial_diff < -5:
-        output_md += f"  - ⚠️ {t2} 在高空争顶上占据绝对碾压优势 ({-aerial_diff:.1f}%)\n"
+        output_md += f"  - ⚠️ {t(t2)} 在高空争顶上占据绝对碾压优势 ({-aerial_diff:.1f}%)\n"
     else:
         output_md += f"  - 双方身体对抗数据接近，无明显高空压制\n"
         
     if ppda_diff > 3:
-        output_md += f"  - ⚠️ {t2} 逼抢极其凶狠，{t1} 的出球将面临巨大压力\n"
+        output_md += f"  - ⚠️ {t(t2)} 逼抢极其凶狠，{t(t1)} 的出球将面临巨大压力\n"
     elif ppda_diff < -3:
-        output_md += f"  - ⚠️ {t1} 逼抢极其凶狠，{t2} 的出球将面临巨大压力\n"
+        output_md += f"  - ⚠️ {t(t1)} 逼抢极其凶狠，{t(t2)} 的出球将面临巨大压力\n"
     
     output_md += f"- **V4 真实胜率**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
     output_md += f"- **火力指征 (xG)**：{xg1_pred:.2f} - {xg2_pred:.2f}\n"
     
     output_md += "### 💡 操盘手点评与推荐\n"
-    if p_home > 0.55: recommendation = f"推荐【{t1} 独赢】，战术和身价双重压制。"
-    elif p_away > 0.55: recommendation = f"推荐【{t2} 独赢】，战术和身价双重压制。"
+    if p_home > 0.55: recommendation = f"推荐【{t(t1)} 独赢】，战术和身价双重压制。"
+    elif p_away > 0.55: recommendation = f"推荐【{t(t2)} 独赢】，战术和身价双重压制。"
     elif p_draw > 0.25: recommendation = "推荐【平局】，战术僵持不下，平局性价比最高。"
     else: recommendation = "战局混乱，推荐关注【波胆或进球数】。"
     
@@ -182,6 +192,8 @@ for _, row in upcoming.iterrows():
     output_md += f"| Top 3 | **{score_probs[2]['score']}** | {score_probs[2]['prob']*100:.1f}% | 20% |\n"
     output_md += "---\n\n"
 
-with open("../../next_4_matches_v4_guide.md", "w", encoding='utf-8') as f:
+import os
+out_path = os.path.join(r"d:\HelloWorld\Git_Project\worldcup\pdata", f"{beijing_date_str}_prediction.md")
+with open(out_path, "w", encoding='utf-8') as f:
     f.write(output_md)
-print("Guide generated.")
+print(f"Guide generated at {out_path}")
