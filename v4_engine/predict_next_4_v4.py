@@ -97,10 +97,19 @@ calibrated_stack = CalibratedClassifierCV(stacking_clf, method='sigmoid', cv=3)
 calibrated_stack.fit(X_train, y_train)
 
 # Output formatting
-output_md = "# 🔮 V4.0 Pre-Match Ultimate: 接下来 4 场比赛战术前瞻\n\n"
+from datetime import datetime, timedelta
+
+target_date_str = '2026-06-14'
+target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
+beijing_date = target_date + timedelta(days=1)
+beijing_date_str = beijing_date.strftime('%Y-%m-%d')
+
+output_md = f"# 🔮 V4.0 Pre-Match Ultimate: 战术前瞻\n\n"
+output_md += f"**比赛官方当地时间**：{target_date_str}\n"
+output_md += f"**🌏 换算北京时间 (UTC+8)**：{beijing_date_str} (凌晨/清晨)\n\n"
 output_md += "本预测已完全加载**「裁判严格度」**与**「战术相克矩阵」**，在开赛前实现降维打击。\n\n"
 
-upcoming = df[df['date'] == '2026-06-14'].head(4)
+upcoming = df[df['date'] == target_date_str].head(4)
 referees = ["Mateu Lahoz (Mock)", "Michael Oliver", "Wilton Sampaio", "Daniele Orsato", "Szymon Marciniak"]
 
 for _, row in upcoming.iterrows():
