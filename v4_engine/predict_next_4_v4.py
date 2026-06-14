@@ -229,14 +229,25 @@ for _, row in upcoming.iterrows():
     output_md += f"  - **理论亚盘**：{ah_str}\n"
     output_md += f"  - **理论大小球**：{ou_str}\n\n"
     
-    output_md += "### 💡 操盘手点评与推荐\n"
-    if hc >= 1.0: recommendation = f"推荐【{t(t1)} 独赢及赢盘】，绝对实力压制，穿盘概率极高。"
-    elif hc <= -1.0: recommendation = f"推荐【{t(t2)} 独赢及赢盘】，绝对实力压制，穿盘概率极高。"
-    elif p_home > 0.45: recommendation = f"推荐【{t(t1)} 独赢或亚盘主队】，占据主动，但需防小胜赢球输盘。"
-    elif p_away > 0.45: recommendation = f"推荐【{t(t2)} 独赢或亚盘客队】，占据主动，防冷平。"
-    else: recommendation = f"战局胶着，亚盘指向 {ah_str}，建议直接搏【平局】或去【小球】。"
-    
-    output_md += f"📝 {recommendation}\n\n"
+    output_md += "### 💡 操盘手深度点评与资金分布建议\n"
+    if p_home > 0.6: core_tone = f"本场比赛 {t(t1)} 具有压倒性优势，模型测算胜率高达 {p_home*100:.1f}%，是一场典型的攻防演练。"
+    elif p_away > 0.6: core_tone = f"本场比赛 {t(t2)} 具有压倒性优势，模型测算胜率高达 {p_away*100:.1f}%，客场作战亦能反客为主。"
+    elif p_draw > 0.3: core_tone = f"本场比赛呈势均力敌之势，双方战力极度接近，模型测算平局概率高达 {p_draw*100:.1f}%，极易陷入拉锯战。"
+    else: core_tone = f"本场比赛虽然 {t(t1) if p_home > p_away else t(t2)} 略占优势，但 {t(t2) if p_home > p_away else t(t1)} 并非毫无还手之力，属于高难度博弈局。"
+
+    if hc >= 1.0: ah_rec = f"机构极可能开出 **{ah_str}** 的深盘。结合绝对实力压制，推荐重注【**{t(t1)} 赢盘**】，穿盘概率极高。"
+    elif hc <= -1.0: ah_rec = f"机构极可能开出 **{ah_str}** 的深盘。结合绝对实力压制，推荐重注【**{t(t2)} 赢盘**】，穿盘概率极高。"
+    elif hc > 0 and hc < 1.0: ah_rec = f"亚盘初盘预计为 **{ah_str}**，生死盘口下建议选择【**{t(t1)} 独赢**】作为稳健打底，亚盘需防赢球输盘的小胜格局。"
+    elif hc < 0 and hc > -1.0: ah_rec = f"亚盘初盘预计为 **{ah_str}**，生死盘口下建议选择【**{t(t2)} 独赢**】作为稳健打底，亚盘需防赢球输盘的小胜格局。"
+    else: ah_rec = f"亚盘指向 **平手盘 (0)** 或极浅让步，数据支持有限，建议直接去往【**平局**】高赔，或选择【**受让方赢盘**】防身。"
+
+    total_xg = xg1_pred + xg2_pred
+    if total_xg >= 2.75: ou_rec = f"火力指征旺盛 (预期进球 {xg1_pred:.2f} + {xg2_pred:.2f})，大概率突破 **{ou_str}**，建议配置【**大球 (Over)**】。"
+    else: ou_rec = f"双方预期进球受限 (预期进球 {xg1_pred:.2f} + {xg2_pred:.2f})，进球数极可能卡在 **{ou_str}** 以下，建议配置【**小球 (Under)**】。"
+
+    output_md += f"- **📌 核心定调**：{core_tone}\n"
+    output_md += f"- **💰 亚盘投资**：{ah_rec}\n"
+    output_md += f"- **🎯 大小球博弈**：{ou_rec}\n\n"
     
     output_md += "**精确波胆矩阵 (Top 3 覆盖)：**\n\n"
     output_md += "| 排位 | 比分 | 发生概率 | 建议资金分配 |\n"
