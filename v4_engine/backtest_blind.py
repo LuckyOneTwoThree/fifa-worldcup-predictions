@@ -137,7 +137,7 @@ def run_blind_prediction(target_date_str):
     beijing_date_str = beijing_date.strftime('%Y-%m-%d')
     
     output_md = f"# 📅 北京时间：{beijing_date_str} (美洲当地 {target_date.month}-{target_date.day})\n"
-    output_md += f"## 📊 赛前量化预测 (绝对盲测版)\n\n"
+    output_md += f"## 📊 V5.0 赛前量化预测 (绝对盲测版)\n\n"
     output_md += "> [!IMPORTANT]\n> 本预测文件在生成时，底层切断了所有该日及该日之后的真实数据，确保 Elo 积分和机器学习权重处于**绝对盲测状态 (Blind Test)**，不含任何后见之明。\n\n"
     
     upcoming = df[df['date'] == target_date_str]

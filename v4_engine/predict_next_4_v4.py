@@ -114,10 +114,10 @@ target_date = datetime.strptime(target_date_str, '%Y-%m-%d')
 beijing_date = target_date + timedelta(days=1)
 beijing_date_str = beijing_date.strftime('%Y-%m-%d')
 
-output_md = f"# 🔮 V4.0 Pre-Match Ultimate: 战术前瞻\n\n"
+output_md = f"# 🔮 V5.0 Pre-Match Ultimate: 战术前瞻\n\n"
 output_md += f"**比赛官方当地时间**：{target_date_str}\n"
 output_md += f"**🌏 换算北京时间 (UTC+8)**：{beijing_date_str} (凌晨/清晨)\n\n"
-output_md += "本预测已完全加载**「裁判严格度」**与**「战术相克矩阵」**，在开赛前实现降维打击。\n\n"
+output_md += "本预测已完全加载**「裁判严格度」**与**「战术相克矩阵」**，并在底层彻底实现 xG 与胜负概率的泊松积分数学闭环。\n\n"
 
 upcoming = df[df['date'] == target_date_str].head(4)
 referees = ["Mateu Lahoz (Mock)", "Michael Oliver", "Wilton Sampaio", "Daniele Orsato", "Szymon Marciniak"]
@@ -214,7 +214,7 @@ for _, row in upcoming.iterrows():
     output_md += "| :--- | :--- | :--- | :--- |\n"
     output_md += f"| Top 1 | **{score_probs[0]['score']}** | {score_probs[0]['prob']*100:.1f}% | 50% |\n"
     output_md += f"| Top 2 | **{score_probs[1]['score']}** | {score_probs[1]['prob']*100:.1f}% | 30% |\n"
-    output_md += f"| Top 3 | **{score_probs[2]['score']}** | {score_probs[2]['prob']*100:.1f}% | 20% |\n"
+    output_md += f"| Top 3 | **{score_probs[2]['score']}** | {score_probs[2]['prob']*100:.1f}% | 20% |\n\n"
     output_md += "---\n\n"
 
 import os
