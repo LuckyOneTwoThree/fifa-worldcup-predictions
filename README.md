@@ -6,6 +6,8 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Engine](https://img.shields.io/badge/Engine-V8.0-orange.svg)](v8_engine_whitepaper.md)
 
+**🇨🇳 中文** | [**English**](README_en.md)
+
 ---
 
 > **⚠️ 免责声明**
