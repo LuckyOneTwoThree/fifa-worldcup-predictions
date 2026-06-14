@@ -148,8 +148,8 @@ def run_blind_prediction(target_date_str):
         e1, e2 = elo_dict.get(t1, 1500), elo_dict.get(t2, 1500)
         sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
         
-        tac1 = tac_dict.get(t1, {"aerial_win_rate": 50.0, "ppda": 12.0})
-        tac2 = tac_dict.get(t2, {"aerial_win_rate": 50.0, "ppda": 12.0})
+        tac1 = tac_dict.get(t1, {"aerial_win_rate": 50.0, "ppda": 12.0, "possession_avg": 50.0})
+        tac2 = tac_dict.get(t2, {"aerial_win_rate": 50.0, "ppda": 12.0, "possession_avg": 50.0})
         aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
         ppda_diff = tac1['ppda'] - tac2['ppda']
         
@@ -199,21 +199,50 @@ def run_blind_prediction(target_date_str):
         ou = round(total_xg / 0.25) * 0.25
         ou_str = f"{ou} 球" if ou % 0.5 == 0 else f"{ou-0.25}/{ou+0.25} 球"
         
+        # V6.0 Logic: Elo Tiers, Possession, Warnings
+        def get_tier(elo):
+            if elo >= 1900: return "T0-世界顶尖"
+            elif elo >= 1750: return "T1-洲际强队"
+            elif elo >= 1600: return "T2-中坚力量"
+            elif elo >= 1450: return "T3-边缘球队"
+            else: return "T4-送分鱼腩"
+        
+        sv_ratio = max(sv1, 0.1) / max(sv2, 0.1)
+        trap_warning = ""
+        if sv_ratio > 2.5 and abs(e1 - e2) < 50:
+            trap_warning = f"\n> [!WARNING]\n> **身价陷阱**：{t(t1)} 身价是对手 {sv_ratio:.1f} 倍，但真实战力(Elo)几乎持平，谨防大热必死！\n"
+        elif sv_ratio < 0.4 and abs(e1 - e2) < 50:
+            trap_warning = f"\n> [!WARNING]\n> **身价陷阱**：{t(t2)} 身价是对手 {1/sv_ratio:.1f} 倍，但真实战力(Elo)几乎持平，谨防大热必死！\n"
+            
+        p1, p2 = tac1.get('possession_avg', 50.0), tac2.get('possession_avg', 50.0)
+        bc1 = (p1 / (p1 + p2)) * 100
+        bc2 = (p2 / (p1 + p2)) * 100
+        
+        disc_warning = ""
+        if strictness > 0.65:
+            if tac1.get('ppda', 12.0) < 10.0: disc_warning += f"  - 🔴 {t(t1)} 逼抢极凶且主裁尺度严苛，极易触发红黄牌及危险定位球！\n"
+            if tac2.get('ppda', 12.0) < 10.0: disc_warning += f"  - 🔴 {t(t2)} 逼抢极凶且主裁尺度严苛，极易触发红黄牌及危险定位球！\n"
+        
         output_md += f"### ⚔️ {t(t1)} vs {t(t2)}\n"
+        if trap_warning: output_md += trap_warning
+        output_md += f"- **底蕴评级 (Elo)**：{get_tier(e1)} ({int(e1)}) vs {get_tier(e2)} ({int(e2)})\n"
         output_md += f"- **身价对比**：€{sv1}m vs €{sv2}m\n"
-        output_md += f"- **模拟主裁**：{assigned_ref} (严厉指数: {strictness})\n"
-        output_md += f"- **核心战术博弈 (Tactical Mismatch)**：\n"
+        output_md += f"- **全息战术雷达 (Tactical Radar)**：\n"
+        output_md += f"  - ⚽ **球权推演**：预计 {t(t1)} 控球率 {bc1:.1f}%，{t(t2)} 控球率 {bc2:.1f}%\n"
         if aerial_diff > 5:
-            output_md += f"  - ⚠️ {t(t1)} 在高空争顶上占据绝对碾压优势 (+{aerial_diff:.1f}%)\n"
+            output_md += f"  - ✈️ {t(t1)} 在高空争顶上占据绝对碾压优势 (+{aerial_diff:.1f}%)\n"
         elif aerial_diff < -5:
-            output_md += f"  - ⚠️ {t(t2)} 在高空争顶上占据绝对碾压优势 ({-aerial_diff:.1f}%)\n"
+            output_md += f"  - ✈️ {t(t2)} 在高空争顶上占据绝对碾压优势 ({-aerial_diff:.1f}%)\n"
         else:
-            output_md += f"  - 双方身体对抗数据接近，无明显高空压制\n"
+            output_md += f"  - ✈️ 双方身体对抗数据接近，无明显高空压制\n"
             
         if ppda_diff > 3:
-            output_md += f"  - ⚠️ {t(t2)} 逼抢极其凶狠，{t(t1)} 的出球将面临巨大压力\n"
+            output_md += f"  - 🌪️ {t(t2)} 逼抢极其凶狠，{t(t1)} 的出球将面临巨大压力\n"
         elif ppda_diff < -3:
-            output_md += f"  - ⚠️ {t(t1)} 逼抢极其凶狠，{t(t2)} 的出球将面临巨大压力\n"
+            output_md += f"  - 🌪️ {t(t1)} 逼抢极其凶狠，{t(t2)} 的出球将面临巨大压力\n"
+            
+        output_md += f"- **裁判因素 (Referee Factor)**：{assigned_ref} (严厉指数: {strictness})\n"
+        if disc_warning: output_md += disc_warning
         
         output_md += f"- **V5 数学统一胜率 (基于泊松积分)**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
         output_md += f"- **火力指征 (xG)**：{xg1_pred:.2f} - {xg2_pred:.2f}\n"
