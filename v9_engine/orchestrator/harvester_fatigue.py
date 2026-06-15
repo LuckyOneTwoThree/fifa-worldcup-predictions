@@ -10,7 +10,7 @@ def run(home_team, away_team, match_date_str):
         shared_dir = os.path.abspath(os.path.join(base_dir, '..'))
         if shared_dir not in sys.path:
             sys.path.append(shared_dir)
-        from v8_shared import load_results_csv
+        from v9_shared import load_results_csv
         
         df = load_results_csv()
         match_date = datetime.strptime(match_date_str.split(' ')[0], '%Y-%m-%d')

@@ -12,7 +12,7 @@ def dixon_coles_prob(l1, l2, k1, k2, rho=0.0):
     elif k1 == 1 and k2 == 1: return prob * (1 - rho)
     return prob
 
-print("Loading data for V8 Backtest Grid Search...")
+print("Loading data for V9 Backtest Grid Search...")
 df = pd.read_csv('../results.csv')
 squad_vals = pd.read_csv('data_scrapers/squad_values.csv')
 tac_df = pd.read_csv('data_scrapers/tactical_styles.csv')
@@ -31,7 +31,7 @@ test_df = df[(df['tournament'] == target_tournament) & (df['date'].dt.year == 20
 cutoff_date = pd.to_datetime('2022-11-20')
 past_df = df[df['date'] < cutoff_date].copy()
 
-print(f"Training V8 on {len(past_df)} matches up to {cutoff_date.date()}...")
+print(f"Training V9 on {len(past_df)} matches up to {cutoff_date.date()}...")
 calibrated_stack, xg_model_home, xg_model_away, elo_dict = train_v8_models(past_df, squad_dict, tac_dict)
 
 print(f"Evaluating on {len(test_df)} World Cup 2022 matches...")

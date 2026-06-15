@@ -9,14 +9,25 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 import math
 from core_model import get_k_factor
-from v8_shared import load_results_csv, get_zh_name, get_cached_models
+from v9_shared import load_results_csv, get_zh_name, get_cached_models
 
-def dixon_coles_prob(l1, l2, k1, k2, rho=0.0):
+def dixon_coles_prob(l1, l2, k1, k2, rho=0.0, elo_diff=0.0):
     prob = (math.exp(-l1) * (l1 ** k1) / math.factorial(k1)) * (math.exp(-l2) * (l2 ** k2) / math.factorial(k2))
-    if k1 == 0 and k2 == 0: return prob * (1 - l1*l2*rho)
-    elif k1 == 0 and k2 == 1: return prob * (1 + l1*rho)
-    elif k1 == 1 and k2 == 0: return prob * (1 + l2*rho)
-    elif k1 == 1 and k2 == 1: return prob * (1 - rho)
+    
+    # Core Dixon Coles adjustment
+    if k1 == 0 and k2 == 0: prob = prob * (1 - l1*l2*rho)
+    elif k1 == 0 and k2 == 1: prob = prob * (1 + l1*rho)
+    elif k1 == 1 and k2 == 0: prob = prob * (1 + l2*rho)
+    elif k1 == 1 and k2 == 1: prob = prob * (1 - rho)
+    
+    # Phase 2: Avalanche Effect (Right Tail Compensation)
+    if elo_diff > 300 and k1 >= 3 and k1 > k2:
+        avalanche_mult = 1.0 + (abs(elo_diff) / 1000.0) * (k1 - 2)
+        prob *= avalanche_mult
+    elif elo_diff < -300 and k2 >= 3 and k2 > k1:
+        avalanche_mult = 1.0 + (abs(elo_diff) / 1000.0) * (k2 - 2)
+        prob *= avalanche_mult
+        
     return prob
 
 def get_base_match_info(target_date_str="2026-06-15"):
@@ -34,7 +45,7 @@ def get_base_match_info(target_date_str="2026-06-15"):
     return matches
 
 def generate_v8_predictions(target_date_str, impact_dict=None):
-    print("Loading V8.0 Pre-Match Ultimate Engine...")
+    print("Loading V9.0 Pre-Match Ultimate Engine...")
 
     df = load_results_csv()
     models = get_cached_models()
@@ -118,6 +129,12 @@ def generate_v8_predictions(target_date_str, impact_dict=None):
                 if tac1.get('possession_avg', 50) > 55: mult1 *= 0.85
                 if tac2.get('possession_avg', 50) > 55: mult2 *= 0.85
                 
+            # Phase 4: Geo-Climatic Debuff for Extreme Heat
+            if 'Heat' in weather or 'Hot' in weather or '35C' in weather:
+                nordic_alpine_teams = ["Norway", "Sweden", "Denmark", "Finland", "Iceland", "Switzerland", "Scotland", "Wales", "Republic of Ireland", "Northern Ireland"]
+                if t1 in nordic_alpine_teams and fatigue_home >= 5: mult1 *= 0.85  # Severe stamina penalty
+                if t2 in nordic_alpine_teams and fatigue_away >= 5: mult2 *= 0.85
+                
             biscotto_risk = impacts.get("biscotto_risk", "NONE")
             
             # 1. Extreme low motivation or confirmed biscotto (MD3 High Risk)
@@ -149,7 +166,9 @@ def generate_v8_predictions(target_date_str, impact_dict=None):
         p_home_pois, p_draw_pois, p_away_pois = 0.0, 0.0, 0.0
         for i in range(15):
             for j in range(15):
-                p = dixon_coles_prob(xg1_pred, xg2_pred, i, j, rho=-0.05)
+                # Pass elo_diff for Avalanche Effect
+                elo_diff = elo_dict.get(t1, 1500) - elo_dict.get(t2, 1500)
+                p = dixon_coles_prob(xg1_pred, xg2_pred, i, j, rho=-0.05, elo_diff=elo_diff)
                 score_probs.append({'score': f'{i}-{j}', 'prob': p})
                 if i > j: p_home_pois += p
                 elif i == j: p_draw_pois += p

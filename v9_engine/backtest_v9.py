@@ -22,7 +22,7 @@ def dixon_coles_prob(l1, l2, k1, k2, rho=0.0):
     elif k1 == 1 and k2 == 1: return prob * (1 - rho)
     return prob
 
-print("Loading V8.0 Pre-Match Ultimate Engine for Blind Backtest...")
+print("Loading V9.0 Pre-Match Ultimate Engine for Blind Backtest...")
 
 df = pd.read_csv('../results.csv')
 squad_vals = pd.read_csv('data_scrapers/squad_values.csv')
@@ -90,7 +90,7 @@ def run_blind_prediction(target_date_str):
     beijing_date_str = beijing_date.strftime('%Y-%m-%d')
     
     output_md = f"# 📅 北京时间：{beijing_date_str} (美洲当地 {target_date.month}-{target_date.day})\n"
-    output_md += f"## 📊 V8.0 全息量化预测 (绝对盲测版)\n\n"
+    output_md += f"## 📊 V9.0 全息量化预测 (绝对盲测版)\n\n"
     output_md += "> [!IMPORTANT]\n> 本预测文件在生成时，底层切断了所有该日及该日之后的真实数据，确保 Elo 积分和机器学习权重处于**绝对盲测状态 (Blind Test)**，不含任何后见之明。\n\n"
     
     upcoming = df[df['date'] == target_date_str]
@@ -209,7 +209,7 @@ def run_blind_prediction(target_date_str):
         global_metrics_data.append({'actual_s1': row['home_score'], 'actual_s2': row['away_score'], 'p_home': p_home, 'p_draw': p_draw, 'p_away': p_away, 'score_probs': score_probs_all})
 
         
-        output_md += f"- **V8 双模加权统一胜率 (基于泊松积分)**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
+        output_md += f"- **V9 双模加权统一胜率 (基于泊松积分)**：主 {p_home*100:.1f}% | 平 {p_draw*100:.1f}% | 客 {p_away*100:.1f}%\n"
         output_md += f"- **火力指征 (xG)**：{xg1_pred:.2f} - {xg2_pred:.2f}\n"
         output_md += f"- **🎲 机器推演盘口**：\n"
         output_md += f"  - **理论亚盘**：{ah_str}\n"
@@ -251,7 +251,7 @@ def run_blind_prediction(target_date_str):
 run_blind_prediction('2026-06-11')
 run_blind_prediction('2026-06-12')
 
-print("\n--- 📈 V8.0 Quantitative Backtest Metrics ---")
+print("\n--- 📈 V9.0 Quantitative Backtest Metrics ---")
 if len(global_metrics_data) > 0:
     import numpy as np
     y_true = []

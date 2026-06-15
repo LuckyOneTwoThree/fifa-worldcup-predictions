@@ -1,10 +1,10 @@
-# 🏆 FIFA World Cup 2026 Predictions — V8.0 Dynamic Engine
+# 🏆 FIFA World Cup 2026 Predictions — V9.0 Dynamic Engine
 
 > **量化足球预测系统**：双引擎泊松积分 + 九维情报雷达 + LLM 智能研判
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Engine](https://img.shields.io/badge/Engine-V8.0-orange.svg)](v8_engine_whitepaper.md)
+[![Engine](https://img.shields.io/badge/Engine-V9.0-orange.svg)](v9_engine_whitepaper.md)
 
 **🇨🇳 中文** | [**English**](README_en.md)
 
@@ -31,7 +31,7 @@
 
 系统采用"**量化底座 + 情报雷达 + LLM 融合研判**"的三层架构：
 
-1. **V8 泊松数学引擎**：基于 49,000+ 场历史比赛训练的双引擎机器学习模型
+1. **V9 泊松数学引擎**：基于 49,000+ 场历史比赛训练的双引擎机器学习模型
 2. **五维情报采集器**：实时爬取伤停、体能、天气、盘口、裁判等场外情报
 3. **LLM 智能研判层**：将量化数据与定性情报融合，生成结构化的分析报告
 
@@ -43,13 +43,13 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    v8_agent_orchestrator.py                  │
+│                    v9_agent_orchestrator.py                  │
 │                      (编排中枢 / 调度器)                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  Phase 1: 情报采集                Phase 2: 数学引擎          │
 │  ┌─────────────────┐             ┌─────────────────┐        │
-│  │ 🔍 News Harvester│             │  predict_v8.py  │        │
+│  │ 🔍 News Harvester│             │  predict_v9.py  │        │
 │  │ 🏃 Fatigue       │──impact──→  │  ┌───────────┐  │        │
 │  │ 🎯 Game Theory   │   dict      │  │ Stacking   │  │        │
 │  │ 💹 Market Odds   │             │  │ Classifier │  │        │
@@ -77,18 +77,18 @@
 worldcup/
 ├── results.csv                        # 49,000+ 场历史比赛数据 (1872-2026)
 ├── requirements.txt                   # Python 依赖
-├── v8_engine_whitepaper.md            # 算法白皮书
+├── v9_engine_whitepaper.md            # 算法白皮书
 ├── .gitignore
 │
-├── v8_engine/                         # 🔧 核心引擎
-│   ├── v8_shared.py                   # 共享模块 (缓存、翻译、模型加载)
+├── v9_engine/                         # 🔧 核心引擎
+│   ├── v9_shared.py                   # 共享模块 (缓存、翻译、模型加载)
 │   ├── core_model.py                  # 模型训练 (Elo + Stacking + Poisson)
-│   ├── predict_v8.py                  # 预测引擎主逻辑
-│   ├── v8_agent_orchestrator.py       # LLM 编排器 (三阶段流水线)
-│   ├── backtest_v8.py                 # 历史盲测
-│   ├── evaluate_v8.py                 # WC 2022 全量评估
+│   ├── predict_v9.py                  # 预测引擎主逻辑
+│   ├── v9_agent_orchestrator.py       # LLM 编排器 (三阶段流水线)
+│   ├── backtest_v9.py                 # 历史盲测
+│   ├── evaluate_v9.py                 # WC 2022 全量评估
 │   ├── robustness_test.py             # 参数网格搜索 (rho / 融合权重)
-│   ├── train_model_v8.py              # 独立训练脚本
+│   ├── train_model_v9.py              # 独立训练脚本
 │   │
 │   ├── orchestrator/                  # 📡 五维情报采集器
 │   │   ├── harvester_news_weather.py  # 新伤停/天气 (DuckDuckGo)
@@ -142,7 +142,7 @@ worldcup/
 | `ppda_diff` | 前场逼抢强度差 | FBRef |
 | `t_weight` | 赛事权重 (WC=60) | 赛程 |
 
-### 动态 xG 修正 (V8 新增)
+### 动态 xG 修正 (V9 新增)
 
 赛外情报通过乘数链直接修正 xG：
 
@@ -201,26 +201,26 @@ requests             # HTTP 请求 (盘口 API)
 
 ```bash
 # 方式 1：仅运行数学引擎 (无需 LLM)
-cd v8_engine
-python predict_v8.py 2026-06-15
+cd v9_engine
+python predict_v9.py 2026-06-15
 
 # 方式 2：运行完整流水线 (数学引擎 + 情报采集 + LLM 研判)
-python v8_agent_orchestrator.py 2026-06-15
+python v9_agent_orchestrator.py 2026-06-15
 ```
 
 ### 运行回测
 
 ```bash
-cd v8_engine
+cd v9_engine
 
 # WC 2022 全量盲测 (含 Brier Score、校准度检查)
-python evaluate_v8.py
+python evaluate_v9.py
 
 # 参数网格搜索 (rho 值 / 融合权重)
 python robustness_test.py
 
 # 自定义日期盲测
-python backtest_v8.py
+python backtest_v9.py
 ```
 
 ---
@@ -316,9 +316,9 @@ injury, out, doubtful, sidelined, acl, knee, hamstring, ruled out,
 
 ### 添加新球队数据
 
-1. 在 `v8_engine/data_scrapers/squad_values.csv` 添加身价
-2. 在 `v8_engine/data_scrapers/tactical_styles.csv` 添加战术数据
-3. 在 `v8_engine/v8_shared.py` 的 `zh_translation` 添加中文名
+1. 在 `v9_engine/data_scrapers/squad_values.csv` 添加身价
+2. 在 `v9_engine/data_scrapers/tactical_styles.csv` 添加战术数据
+3. 在 `v9_engine/v9_shared.py` 的 `zh_translation` 添加中文名
 
 ### 接入真实盘口 API
 
@@ -330,7 +330,7 @@ export ODDS_API_KEY=your_api_key_here
 
 ### 自定义 AGENT_PROMPT
 
-编辑 `v8_engine/v8_agent_orchestrator.py` 中的 `AGENT_PROMPT` 变量，修改 LLM 的报告生成指令。
+编辑 `v9_engine/v9_agent_orchestrator.py` 中的 `AGENT_PROMPT` 变量，修改 LLM 的报告生成指令。
 
 ---
 

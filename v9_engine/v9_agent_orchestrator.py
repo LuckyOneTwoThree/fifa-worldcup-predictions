@@ -13,15 +13,15 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 if base_dir not in sys.path:
     sys.path.append(base_dir)
 
-from predict_v8 import get_base_match_info, generate_v8_predictions
-from v8_shared import get_zh_name
+from predict_v9 import get_base_match_info, generate_v8_predictions
+from v9_shared import get_zh_name
 
 # SYSTEM PROMPT FOR LLM REPORT GENERATION
 AGENT_PROMPT = """
 你是一个顶尖的华尔街量化对冲基金操盘手和体育风控专家。
-你将获得由 V8 泊松数学引擎计算出的纯粹量化数据（基准面），以及 9 维雷达采集到的场外情报（伤停、天气、疲劳度、资金异动、主裁风格等）。
+你将获得由 V9 泊松数学引擎计算出的纯粹量化数据（基准面），以及 9 维雷达采集到的场外情报（伤停、天气、疲劳度、资金异动、主裁风格等）。
 
-请遵循以下极度严格的金融风控原则撰写《V8 终极实盘决策内参》，并且**必须**完全采用以下五大版块的结构排版：
+请遵循以下极度严格的金融风控原则撰写《V9 终极实盘决策内参》，并且**必须**完全采用以下五大版块的结构排版：
 
 【结构强制规范】
 **📋 一、全局作战总览 (Global Overview)**
@@ -49,7 +49,7 @@ AGENT_PROMPT = """
 """
 
 def run_orchestrator(date_str):
-    print(f"🚀 [Orchestrator] Initiating V8.0 Pure Predictive Sequence for {date_str}...")
+    print(f"🚀 [Orchestrator] Initiating V9.0 Pure Predictive Sequence for {date_str}...")
     
     matches = get_base_match_info(date_str)
     
@@ -57,14 +57,14 @@ def run_orchestrator(date_str):
         print(f"No match predictions returned for {date_str}.")
         return
 
-    mega_context = f"# V8.0 Agent Ultimate Context: {date_str}\n\n"
+    mega_context = f"# V9.0 Agent Ultimate Context: {date_str}\n\n"
     mega_context += f"## Agent Core Directives:\n{AGENT_PROMPT}\n\n---\n"
     
     impact_dict = {}
     
     # Harvester Phase FIRST
     for t1_en, t2_en, t1_zh, t2_zh in matches:
-        print(f"\n⚡ [V8 Phase 1] Harvesting real-time intel for: {t1_zh} vs {t2_zh}")
+        print(f"\n⚡ [V9 Phase 1] Harvesting real-time intel for: {t1_zh} vs {t2_zh}")
         match_key = f"{t1_zh} vs {t2_zh}"
         impact_dict[match_key] = {}
         
@@ -105,7 +105,7 @@ def run_orchestrator(date_str):
         impact_dict[match_key]["_raw_fatigue"] = fatigue
         impact_dict[match_key]["_raw_gt"] = game_theory
     
-    print("\n🧠 [V8 Phase 2] Running V8 Math Engine with Dynamic Penalties...")
+    print("\n🧠 [V9 Phase 2] Running V9 Math Engine with Dynamic Penalties...")
     results_dict, _ = generate_v8_predictions(date_str, impact_dict)
     
     # Phase 3: Construct Context
@@ -116,7 +116,7 @@ def run_orchestrator(date_str):
         match_key = f"{t1_zh} vs {t2_zh}"
         
         mega_context += f"## ⚔️ {t1_zh} vs {t2_zh}\n"
-        mega_context += "### V8 Dynamic Quant Base Data (Post-Penalty)\n```json\n"
+        mega_context += "### V9 Dynamic Quant Base Data (Post-Penalty)\n```json\n"
         mega_context += json.dumps(match_data, indent=2) + "\n```\n"
         
         impacts = impact_dict.get(match_key, {})
@@ -139,7 +139,7 @@ def run_orchestrator(date_str):
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(mega_context)
     
-    print(f"✅ [Orchestrator] Complete! V8 Dynamic Context saved to {out_file}")
+    print(f"✅ [Orchestrator] Complete! V9 Dynamic Context saved to {out_file}")
 
 if __name__ == '__main__':
     target_date_str = sys.argv[1] if len(sys.argv) > 1 else '2026-06-15'

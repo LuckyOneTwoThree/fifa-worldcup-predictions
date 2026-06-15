@@ -54,7 +54,7 @@ def run(home_team, away_team, v8_prob_home, v8_prob_draw, v8_prob_away):
         except Exception as e:
             source = f"API Request Failed ({str(e)}). Fallback to Theoretical."
     else:
-        source = "ODDS_API_KEY not set. Graceful Degradation to V8 Theoretical Odds."
+        source = "ODDS_API_KEY not set. Graceful Degradation to V9 Theoretical Odds."
 
     # Graceful Fallback: Generate theoretical odds with a 5% bookmaker overround
     if "Fallback" in source or not source.startswith("The-Odds"):
