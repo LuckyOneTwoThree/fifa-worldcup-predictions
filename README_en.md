@@ -16,6 +16,7 @@
 >
 > - 🚫 **This project does NOT constitute any betting advice**, nor does it encourage gambling in any form
 > - 🚫 **I do NOT recommend using this system for actual wagering or betting decisions**
+> - ⚠️ **This system is a pre-match static prediction** — it runs on historical data and pre-match intel only, with **no real-time data feeds**. Pre-match predictions inherently cannot capture in-game dynamics (red cards, injuries, tactical shifts), so their **accuracy is naturally lower than real-time systems**
 > - ✅ If you're interested in the algorithms themselves, feel free to study, discuss, and improve them
 > - ✅ I will continue to conduct **prediction vs actual result comparisons** to validate whether the algorithm truly has predictive power
 >
