@@ -111,16 +111,29 @@ def generate_v8_predictions(target_date_str, impact_dict=None):
             # Base multiplier starts at 1.0
             mult1, mult2 = 1.0, 1.0
             
-            if fatigue_home < 5 and ppda1 < 11.0: mult1 *= 0.90
-            if fatigue_away < 5 and ppda2 < 11.0: mult2 *= 0.90
+            if fatigue_home < 5 and tac1.get('ppda', 12.0) < 11.0: mult1 *= 0.90
+            if fatigue_away < 5 and tac2.get('ppda', 12.0) < 11.0: mult2 *= 0.90
             
             if 'Rain' in weather or 'Storm' in weather:
                 if tac1.get('possession_avg', 50) > 55: mult1 *= 0.85
                 if tac2.get('possession_avg', 50) > 55: mult2 *= 0.85
                 
-            if motivation == "LOW (Biscotto Risk)" or motivation == "LOW (Rotations expected)":
+            biscotto_risk = impacts.get("biscotto_risk", "NONE")
+            
+            # 1. Extreme low motivation or confirmed biscotto (MD3 High Risk)
+            if motivation == "LOW" or biscotto_risk == "HIGH":
                 mult1 *= 0.60
                 mult2 *= 0.60
+            # 2. Potential conservative play (MD3 permutation risk)
+            elif biscotto_risk == "MEDIUM":
+                mult1 *= 0.85
+                mult2 *= 0.85
+            # 3. Extreme tension (Knockouts - defensive posturing early on)
+            elif motivation == "EXTREME":
+                mult1 *= 0.90
+                mult2 *= 0.90
+            # 4. Standard Group Stage (MD1/MD2)
+            # mult1 *= 1.0 (no penalty)
                 
             if inj_home > 0: mult1 *= (1.0 - (inj_home * 0.1))
             if inj_away > 0: mult2 *= (1.0 - (inj_away * 0.1))
@@ -142,6 +155,10 @@ def generate_v8_predictions(target_date_str, impact_dict=None):
                 elif i == j: p_draw_pois += p
                 else: p_away_pois += p
 
+        # Normalize score probs
+        total_prob = sum(x['prob'] for x in score_probs)
+        for x in score_probs:
+            x['prob'] /= total_prob
         score_probs = sorted(score_probs, key=lambda x: x['prob'], reverse=True)
 
         w_ml, w_pois = 0.3, 0.7

@@ -56,12 +56,17 @@ def train_v8_models(df, squad_dict, tac_dict):
         
         # Build training set using V8 rules
         if tournament in major_tournaments and row['date'].year >= 2010:
-            sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
-            
-            tac1 = tac_dict.get(t1, {"aerial_win_rate": 50.0, "ppda": 12.0})
-            tac2 = tac_dict.get(t2, {"aerial_win_rate": 50.0, "ppda": 12.0})
-            aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
-            ppda_diff = tac1['ppda'] - tac2['ppda']
+            # Prevent Data Leakage: only use static 2026 tactical/squad data if match is in 2026.
+            if row['date'].year >= 2025:
+                sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
+                tac1 = tac_dict.get(t1, {"aerial_win_rate": 50.0, "ppda": 12.0})
+                tac2 = tac_dict.get(t2, {"aerial_win_rate": 50.0, "ppda": 12.0})
+                aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
+                ppda_diff = tac1['ppda'] - tac2['ppda']
+            else:
+                sv1, sv2 = 50, 50
+                aerial_diff = 0.0
+                ppda_diff = 0.0
             
             t_weight = get_k_factor(tournament)
             

@@ -99,6 +99,7 @@ def run_orchestrator(date_str):
         tour_stage = "FIFA World Cup"
         game_theory = harvester_game_theory.run(t1_zh, t2_zh, tour_stage, date_str)
         impact_dict[match_key]["motivation_index"] = game_theory.get("motivation_index", "HIGH")
+        impact_dict[match_key]["biscotto_risk"] = game_theory.get("biscotto_risk", "NONE")
         
         impact_dict[match_key]["_raw_news"] = news
         impact_dict[match_key]["_raw_fatigue"] = fatigue

@@ -29,7 +29,7 @@ def load_results_csv():
     return df
 
 @lru_cache(maxsize=1)
-def get_cached_models():
+def get_cached_models(cutoff_date="2026-06-11"):
     """Train models only once per session and cache them."""
     import sys
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -39,7 +39,7 @@ def get_cached_models():
     from core_model import train_v8_models
     
     df = load_results_csv()
-    train_df = df[df['date'] < '2026-06-11'].copy() # Train on data before WC 2026
+    train_df = df[df['date'] < cutoff_date].copy() # Train on data before cutoff
     
     squad_vals = pd.read_csv(os.path.join(base_dir, 'data_scrapers/squad_values.csv'))
     tac_df = pd.read_csv(os.path.join(base_dir, 'data_scrapers/tactical_styles.csv'))
