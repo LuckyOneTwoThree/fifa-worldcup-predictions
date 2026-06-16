@@ -63,13 +63,13 @@ def run_orchestrator(date_str):
     impact_dict = {}
     
     # Harvester Phase FIRST
-    for t1_en, t2_en, t1_zh, t2_zh in matches:
-        print(f"\n⚡ [V10 Phase 1] Harvesting real-time intel for: {t1_zh} vs {t2_zh}")
+    for t1_en, t2_en, t1_zh, t2_zh, city in matches:
+        print(f"\n⚡ [V10 Phase 1] Harvesting real-time intel for: {t1_zh} vs {t2_zh} in {city}")
         match_key = f"{t1_zh} vs {t2_zh}"
         impact_dict[match_key] = {}
         
         # 1. Weather & News (Pass English names for DDG query)
-        news = harvester_news_weather.run(t1_en, t2_en, city="Stadium")
+        news = harvester_news_weather.run(t1_en, t2_en, city=city)
         weather = news.get("weather", "Clear")
         
         # Enhanced Injury Check

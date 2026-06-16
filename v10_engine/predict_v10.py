@@ -35,7 +35,8 @@ def get_base_match_info(target_date_str="2026-06-15"):
     matches = []
     for _, row in upcoming.iterrows():
         t1_en, t2_en = map_name(row['home_team']), map_name(row['away_team'])
-        matches.append((t1_en, t2_en, get_zh_name(t1_en), get_zh_name(t2_en)))
+        city = row.get('city', 'Stadium')
+        matches.append((t1_en, t2_en, get_zh_name(t1_en), get_zh_name(t2_en), city))
     return matches
 
 def generate_v10_predictions(target_date_str, impact_dict=None):

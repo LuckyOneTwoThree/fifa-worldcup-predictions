@@ -57,15 +57,6 @@ def train_v8_models(df, squad_dict, tac_dict):
         # Build training set using V10 rules
         if tournament in major_tournaments and row['date'].year >= 2010:
             # Prevent Data Leakage: only use static 2026 tactical/squad data if match is in 2026.
-            clutch_dict = {
-                "Japan": 1.2, "Croatia": 1.2, "Germany": 1.15, "Argentina": 1.15,
-                "Real Madrid": 1.2, "Morocco": 1.1, "Senegal": 1.1, "Uruguay": 1.1,
-                "Italy": 1.1, "South Korea": 1.1
-            }
-            clutch1 = clutch_dict.get(t1, 1.0)
-            clutch2 = clutch_dict.get(t2, 1.0)
-            clutch_diff = clutch1 - clutch2
-
             # Prevent Data Leakage
             if row['date'].year >= 2025:
                 sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
@@ -87,7 +78,6 @@ def train_v8_models(df, squad_dict, tac_dict):
                 'sv_diff': sv1 - sv2,
                 'aerial_diff': aerial_diff,
                 'ppda_diff': ppda_diff,
-                'clutch_diff': clutch_diff,
                 't_weight': t_weight,
                 'result': result,
                 'home_score': s1,
