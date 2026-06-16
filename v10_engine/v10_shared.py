@@ -46,6 +46,6 @@ def get_cached_models(cutoff_date="2026-06-11"):
     squad_dict = dict(zip(squad_vals['team'], squad_vals['squad_value_m']))
     tac_dict = tac_df.set_index('team').to_dict('index')
     
-    print("[V9 Shared] Training models... (This should only happen once per session)")
+    print("[V10 Shared] Training models... (This should only happen once per session)")
     models = train_v8_models(train_df, squad_dict, tac_dict)
     return models

@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 import math
 from core_model import get_k_factor
-from v9_shared import load_results_csv, get_zh_name, get_cached_models
+from v10_shared import load_results_csv, get_zh_name, get_cached_models
 
 def dixon_coles_prob(l1, l2, k1, k2, rho=0.0, elo_diff=0.0):
     prob = (math.exp(-l1) * (l1 ** k1) / math.factorial(k1)) * (math.exp(-l2) * (l2 ** k2) / math.factorial(k2))
@@ -20,13 +20,7 @@ def dixon_coles_prob(l1, l2, k1, k2, rho=0.0, elo_diff=0.0):
     elif k1 == 1 and k2 == 0: prob = prob * (1 + l2*rho)
     elif k1 == 1 and k2 == 1: prob = prob * (1 - rho)
     
-    # Phase 2: Avalanche Effect (Right Tail Compensation)
-    if elo_diff > 300 and k1 >= 3 and k1 > k2:
-        avalanche_mult = 1.0 + (abs(elo_diff) / 1000.0) * (k1 - 2)
-        prob *= avalanche_mult
-    elif elo_diff < -300 and k2 >= 3 and k2 > k1:
-        avalanche_mult = 1.0 + (abs(elo_diff) / 1000.0) * (k2 - 2)
-        prob *= avalanche_mult
+    # Phase 2: Avalanche Effect removed due to V10 redesign (Park-the-bus resistance replaces this)
         
     return prob
 
@@ -45,7 +39,7 @@ def get_base_match_info(target_date_str="2026-06-15"):
     return matches
 
 def generate_v8_predictions(target_date_str, impact_dict=None):
-    print("Loading V9.0 Pre-Match Ultimate Engine...")
+    print("Loading V10.0 Pre-Match Ultimate Engine...")
 
     df = load_results_csv()
     models = get_cached_models()
@@ -136,6 +130,16 @@ def generate_v8_predictions(target_date_str, impact_dict=None):
                 if t2 in nordic_alpine_teams and fatigue_away >= 5: mult2 *= 0.85
                 
             biscotto_risk = impacts.get("biscotto_risk", "NONE")
+            
+            # Phase 5: Park-the-Bus Resistance (V10)
+            elo_diff_raw = e1 - e2
+            if elo_diff_raw > 200:
+                # Home is heavy favorite. If away team plays conservative, penalize Home xG.
+                if tac2.get('ppda', 12.0) >= 10.5 or tac2.get('possession_avg', 50) <= 45:
+                    mult1 *= 0.70
+            elif elo_diff_raw < -200:
+                if tac1.get('ppda', 12.0) >= 10.5 or tac1.get('possession_avg', 50) <= 45:
+                    mult2 *= 0.70
             
             # 1. Extreme low motivation or confirmed biscotto (MD3 High Risk)
             if motivation == "LOW" or biscotto_risk == "HIGH":

@@ -16,7 +16,7 @@ def get_k_factor(tournament):
 
 def train_v8_models(df, squad_dict, tac_dict):
     """
-    Trains the V9 Dual-Engine ML Pipeline.
+    Trains the V10 Dual-Engine ML Pipeline.
     Returns:
     - calibrated_stack: classification model for Win/Draw/Loss
     - xg_model_home: Poisson regressor for home xG
@@ -54,7 +54,7 @@ def train_v8_models(df, squad_dict, tac_dict):
         if t2 not in elo_dict: elo_dict[t2] = 1500
         elo1, elo2 = elo_dict[t1], elo_dict[t2]
         
-        # Build training set using V9 rules
+        # Build training set using V10 rules
         if tournament in major_tournaments and row['date'].year >= 2010:
             # Prevent Data Leakage: only use static 2026 tactical/squad data if match is in 2026.
             clutch_dict = {
