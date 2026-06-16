@@ -13,7 +13,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 if base_dir not in sys.path:
     sys.path.append(base_dir)
 
-from predict_v10 import get_base_match_info, generate_v8_predictions
+from predict_v10 import get_base_match_info, generate_v10_predictions
 from v10_shared import get_zh_name
 
 # SYSTEM PROMPT FOR LLM REPORT GENERATION
@@ -106,7 +106,7 @@ def run_orchestrator(date_str):
         impact_dict[match_key]["_raw_gt"] = game_theory
     
     print("\n🧠 [V10 Phase 2] Running V10 Math Engine with Dynamic Penalties...")
-    results_dict, _ = generate_v8_predictions(date_str, impact_dict)
+    results_dict, _ = generate_v10_predictions(date_str, impact_dict)
     
     # Phase 3: Construct Context
     for match_title, match_data in results_dict.items():

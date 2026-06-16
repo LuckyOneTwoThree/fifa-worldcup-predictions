@@ -38,7 +38,7 @@ def get_base_match_info(target_date_str="2026-06-15"):
         matches.append((t1_en, t2_en, get_zh_name(t1_en), get_zh_name(t2_en)))
     return matches
 
-def generate_v8_predictions(target_date_str, impact_dict=None):
+def generate_v10_predictions(target_date_str, impact_dict=None):
     print("Loading V10.0 Pre-Match Ultimate Engine...")
 
     df = load_results_csv()
@@ -244,4 +244,4 @@ def generate_v8_predictions(target_date_str, impact_dict=None):
 if __name__ == '__main__':
     import sys
     target_date_str = sys.argv[1] if len(sys.argv) > 1 else '2026-06-15'
-    generate_v8_predictions(target_date_str)
+    generate_v10_predictions(target_date_str)

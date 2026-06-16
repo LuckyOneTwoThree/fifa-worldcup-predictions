@@ -17,8 +17,19 @@ def harvest_news(team_name):
 def harvest_weather(match_city="Unknown"):
     import hashlib
     hash_val = int(hashlib.md5(match_city.encode('utf-8')).hexdigest(), 16)
+    
+    # Base states
     weather_states = ["Clear sky", "Cloudy", "Rain", "Storm", "Clear sky"]
     w = weather_states[hash_val % len(weather_states)]
+    
+    # Override for known hot cities during summer
+    hot_cities = ["Miami", "Houston", "Dallas", "Atlanta", "Monterrey", "Guadalajara", "Los Angeles"]
+    if any(city in match_city for city in hot_cities):
+        if hash_val % 3 == 0:
+            w = "Extreme Heat (35C+)"
+        elif hash_val % 3 == 1:
+            w = "Hot and Humid"
+            
     return f"{w}, optimal conditions for {match_city} (Simulated)"
 
 def run(home_team, away_team, city="Stadium"):
