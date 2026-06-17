@@ -1,12 +1,12 @@
-# 🏆 FIFA World Cup 2026 Predictions — V8.0 Dynamic Engine
+# 🏆 FIFA World Cup 2026 Predictions — V10.5 Dynamic Engine
 
-> **Quantitative Football Prediction System**: Dual-Engine Poisson Integration + 9D Intel Radar + LLM Synthesis
+> **Quantitative Football Prediction System**: Tweedie xG Regressor + Logistic Regression + 9D Intel Radar + LLM Synthesis
 
 [**🇨🇳 中文**](README.md) | **English**
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Engine](https://img.shields.io/badge/Engine-V8.0-orange.svg)](v8_engine_whitepaper.md)
+[![Engine](https://img.shields.io/badge/Engine-V10.5-orange.svg)](v10_engine_whitepaper.md)
 
 ---
 
@@ -30,7 +30,7 @@ This is a **quantitative football prediction system built out of personal intere
 
 The system uses a three-layer architecture: **"Quantitative Engine + Intel Radar + LLM Synthesis"**:
 
-1. **V8 Poisson Math Engine**: Dual-engine ML model trained on 49,000+ historical matches
+1. **V10.5 Math Engine**: Logistic Regression (3D feature reduction) + Tweedie Regressor trained on 49,000+ historical matches
 2. **5D Intel Harvesters**: Real-time crawling of injuries, fatigue, weather, odds, and referee data
 3. **LLM Synthesis Layer**: Fuses quantitative data with qualitative intel to generate structured analysis reports
 
@@ -42,21 +42,21 @@ The system uses a three-layer architecture: **"Quantitative Engine + Intel Radar
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    v8_agent_orchestrator.py                  │
+│                    v10_agent_orchestrator.py                 │
 │                    (Orchestrator / Scheduler)                │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  Phase 1: Intel Harvesting          Phase 2: Math Engine    │
 │  ┌─────────────────┐             ┌─────────────────┐        │
-│  │ 🔍 News Harvester│             │  predict_v8.py  │        │
+│  │ 🔍 News/OSINT    │             │  predict_v10.py  │        │
 │  │ 🏃 Fatigue       │──impact──→  │  ┌───────────┐  │        │
-│  │ 🎯 Game Theory   │   dict      │  │ Stacking   │  │        │
-│  │ 💹 Market Odds   │             │  │ Classifier │  │        │
-│  │ ⚖️ Micro Referee │             │  │ (30% wt.)  │  │        │
+│  │ 🎯 Game Theory   │   dict      │  │ Logistic   │  │        │
+│  │ 💹 Market Odds   │             │  │ Regression │  │        │
+│  │ ⚖️ Micro Referee │             │  │ (3D feature)│  │        │
 │  └─────────────────┘             │  ├───────────┤  │        │
-│                                   │  │ Poisson   │  │        │
+│                                   │  │ Tweedie   │  │        │
 │  Phase 3: Context Building        │  │ Regressor │  │        │
-│  ┌─────────────────┐             │  │ (70% wt.)  │  │        │
+│  ┌─────────────────┐             │  │ (xG fitted)│  │        │
 │  │ mega_context.md │◀────────────│  └───────────┘  │        │
 │  │ (LLM Input)      │  results    └─────────────────┘        │
 │  └────────┬────────┘                                        │
@@ -79,18 +79,18 @@ worldcup/
 ├── v8_engine_whitepaper.md            # Algorithm whitepaper
 ├── .gitignore
 │
-├── v8_engine/                         # 🔧 Core Engine
-│   ├── v8_shared.py                   # Shared module (caching, translation, model loading)
-│   ├── core_model.py                  # Model training (Elo + Stacking + Poisson)
-│   ├── predict_v8.py                  # Prediction engine main logic
-│   ├── v8_agent_orchestrator.py       # LLM orchestrator (3-phase pipeline)
-│   ├── backtest_v8.py                 # Historical blind backtest
-│   ├── evaluate_v8.py                 # WC 2022 full evaluation
-│   ├── robustness_test.py             # Parameter grid search (rho / fusion weights)
-│   ├── train_model_v8.py              # Standalone training script
+├── v10_engine/                         # 🔧 Core Engine
+│   ├── v10_shared.py                   # Shared module (caching, translation, model loading)
+│   ├── core_model.py                  # Model training (3D features + LR + Tweedie)
+│   ├── predict_v10.py                  # Prediction engine main logic
+│   ├── v10_agent_orchestrator.py       # LLM orchestrator (3-phase pipeline)
+│   ├── backtest_v10.py                 # Historical blind backtest
+│   ├── evaluate_v10.py                 # WC 2022 full evaluation
+│   ├── robustness_test.py             # Parameter grid search
+│   ├── train_model_v10.py              # Standalone training script
 │   │
 │   ├── orchestrator/                  # 📡 5D Intel Harvesters
-│   │   ├── harvester_news_weather.py  # Injury/morale news (DuckDuckGo)
+│   │   ├── harvester_news_weather.py  # News/OSINT deterministic fallback
 │   │   ├── harvester_fatigue.py       # Rest days / fatigue
 │   │   ├── harvester_game_theory.py   # Motivation / biscotto risk
 │   │   ├── harvester_market_odds.py   # Market odds / money flow (The-Odds-API)

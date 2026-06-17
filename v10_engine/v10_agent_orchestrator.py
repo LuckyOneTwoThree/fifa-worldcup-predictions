@@ -2,6 +2,10 @@ import sys
 import json
 import os
 import subprocess
+import concurrent.futures
+import threading
+
+print_lock = threading.Lock()
 from datetime import datetime
 from orchestrator import harvester_news_weather
 from orchestrator import harvester_fatigue
@@ -62,17 +66,24 @@ def run_orchestrator(date_str):
     
     impact_dict = {}
     
-    # Harvester Phase FIRST
-    for t1_en, t2_en, t1_zh, t2_zh, city in matches:
-        print(f"\n⚡ [V10 Phase 1] Harvesting real-time intel for: {t1_zh} vs {t2_zh} in {city}")
+    def harvest_match_data(match_info):
+        t1_en, t2_en, t1_zh, t2_zh, city = match_info
+        with print_lock:
+            print(f"\n⚡ [V10 Phase 1] Harvesting real-time intel for: {t1_zh} vs {t2_zh} in {city}")
         match_key = f"{t1_zh} vs {t2_zh}"
-        impact_dict[match_key] = {}
         
-        # 1. Weather & News (Pass English names for DDG query)
-        news = harvester_news_weather.run(t1_en, t2_en, city=city)
+        # Parallelize harvesters within the match
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+            news_future = pool.submit(harvester_news_weather.run, t1_en, t2_en, city)
+            fatigue_future = pool.submit(harvester_fatigue.run, t1_en, t2_en, date_str)
+            gt_future = pool.submit(harvester_game_theory.run, t1_zh, t2_zh, "FIFA World Cup", date_str)
+            
+            news = news_future.result()
+            fatigue = fatigue_future.result()
+            game_theory = gt_future.result()
+            
         weather = news.get("weather", "Clear")
         
-        # Enhanced Injury Check
         def check_injury(news_list):
             if not isinstance(news_list, list): return 0
             keywords = ["injury", "缺阵", "out", "doubtful", "sidelined", "acl", "knee", "hamstring", "ruled out", "受伤", "膝盖", "韧带", "报销", "伤退"]
@@ -86,29 +97,33 @@ def run_orchestrator(date_str):
             
         inj_home = check_injury(news.get("home_news", []))
         inj_away = check_injury(news.get("away_news", []))
-        impact_dict[match_key]["weather"] = weather
-        impact_dict[match_key]["injuries_home"] = inj_home
-        impact_dict[match_key]["injuries_away"] = inj_away
         
-        # 2. Fatigue (Pass English names to match CSV)
-        fatigue = harvester_fatigue.run(t1_en, t2_en, date_str)
-        impact_dict[match_key]["fatigue_home"] = fatigue.get("home_rest_days", 7)
-        impact_dict[match_key]["fatigue_away"] = fatigue.get("away_rest_days", 7)
+        return match_key, {
+            "weather": weather,
+            "injuries_home": inj_home,
+            "injuries_away": inj_away,
+            "fatigue_home": fatigue.get("home_rest_days", 7),
+            "fatigue_away": fatigue.get("away_rest_days", 7),
+            "motivation_index": game_theory.get("motivation_index", "HIGH"),
+            "biscotto_risk": game_theory.get("biscotto_risk", "NONE"),
+            "_raw_news": news,
+            "_raw_fatigue": fatigue,
+            "_raw_gt": game_theory
+        }
+
+    # Harvest all matches sequentially to avoid log interleaving, but harvesters inside run concurrently
+    results = []
+    for m in matches:
+        results.append(harvest_match_data(m))
         
-        # 3. Game Theory
-        tour_stage = "FIFA World Cup"
-        game_theory = harvester_game_theory.run(t1_zh, t2_zh, tour_stage, date_str)
-        impact_dict[match_key]["motivation_index"] = game_theory.get("motivation_index", "HIGH")
-        impact_dict[match_key]["biscotto_risk"] = game_theory.get("biscotto_risk", "NONE")
-        
-        impact_dict[match_key]["_raw_news"] = news
-        impact_dict[match_key]["_raw_fatigue"] = fatigue
-        impact_dict[match_key]["_raw_gt"] = game_theory
+    for match_key, data in results:
+        impact_dict[match_key] = data
     
     print("\n🧠 [V10 Phase 2] Running V10 Math Engine with Dynamic Penalties...")
     results_dict, _ = generate_v10_predictions(date_str, impact_dict)
     
     # Phase 3: Construct Context
+    frontend_data = {}
     for match_title, match_data in results_dict.items():
         t1_en, t2_en = match_title.split(" vs ")
         t1_zh = get_zh_name(t1_en)
@@ -124,12 +139,23 @@ def run_orchestrator(date_str):
         mega_context += f"### 2. Squad Fatigue\n```json\n{json.dumps(impacts.get('_raw_fatigue',{}), indent=2)}\n```\n"
         mega_context += f"### 3. News & Weather\n```json\n{json.dumps(impacts.get('_raw_news',{}), indent=2)}\n```\n"
         
-        odds = harvester_market_odds.run(t1_en, t2_en, match_data["p_home"], match_data["p_draw"], match_data["p_away"])
-        referee = harvester_micro_referee.run(t1_en, t2_en, match_data["referee"], match_data["ppda_home"], match_data["ppda_away"], match_data["strictness"])
+        # Parallelize Phase 3 fetching
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            odds_future = pool.submit(harvester_market_odds.run, t1_en, t2_en, match_data["p_home"], match_data["p_draw"], match_data["p_away"])
+            referee_future = pool.submit(harvester_micro_referee.run, t1_en, t2_en, match_data["referee"], match_data["ppda_home"], match_data["ppda_away"], match_data["strictness"])
+            odds = odds_future.result()
+            referee = referee_future.result()
 
         mega_context += f"### 4. Market Odds & Money Flow\n```json\n{json.dumps(odds, indent=2)}\n```\n"
         mega_context += f"### 5. Referee Micro-Analysis\n```json\n{json.dumps(referee, indent=2)}\n```\n\n"
         mega_context += "---\n"
+        
+        frontend_data[match_key] = {
+            "match_info": match_data,
+            "impacts": impacts,
+            "odds": odds,
+            "referee": referee
+        }
 
     tmp_dir = "tmp"
     if not os.path.exists(tmp_dir):
@@ -138,8 +164,16 @@ def run_orchestrator(date_str):
     out_file = f"{tmp_dir}/{date_str}_Ultimate_Context.md"
     with open(out_file, "w", encoding="utf-8") as f:
         f.write(mega_context)
+        
+    frontend_out_dir = os.path.join(base_dir, "../web_ui/public")
+    if not os.path.exists(frontend_out_dir):
+        os.makedirs(frontend_out_dir)
+    frontend_out_file = os.path.join(frontend_out_dir, "latest_intel.json")
+    with open(frontend_out_file, "w", encoding="utf-8") as f:
+        json.dump(frontend_data, f, indent=2, ensure_ascii=False)
     
     print(f"✅ [Orchestrator] Complete! V10 Dynamic Context saved to {out_file}")
+    print(f"✅ [Orchestrator] Complete! Frontend JSON saved to {frontend_out_file}")
 
 if __name__ == '__main__':
     target_date_str = sys.argv[1] if len(sys.argv) > 1 else '2026-06-15'

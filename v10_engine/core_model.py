@@ -56,29 +56,20 @@ def train_v8_models(df, squad_dict, tac_dict):
         
         # Build training set using V10 rules
         if tournament in major_tournaments and row['date'].year >= 2010:
-            # Prevent Data Leakage: only use static 2026 tactical/squad data if match is in 2026.
-            # Prevent Data Leakage
-            if row['date'].year >= 2025:
-                sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
-                tac1 = tac_dict.get(t1, {"aerial_win_rate": 50.0, "ppda": 12.0})
-                tac2 = tac_dict.get(t2, {"aerial_win_rate": 50.0, "ppda": 12.0})
-                aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
-                ppda_diff = tac1['ppda'] - tac2['ppda']
-            else:
-                sv1, sv2 = 50, 50
-                aerial_diff = 0.0
-                ppda_diff = 0.0
-            
+            # Use current 2026 data as a static proxy for historical tactical/squad data
+            # Dead SV/Tactical code removed to prevent data leakage and speed up training
             t_weight = get_k_factor(tournament)
+            
+            is_neutral = str(row['neutral']).upper() == 'TRUE'
+            is_host = (t1 == row.get('country') or t2 == row.get('country'))
+            home_adv = 1 if (is_host and not is_neutral) else 0
             
             result = 1 if s1 > s2 else (0 if s1 == s2 else -1)
             train_data.append({
                 'team1': t1, 'team2': t2,
                 'elo_diff': elo1 - elo2,
-                'sv_diff': sv1 - sv2,
-                'aerial_diff': aerial_diff,
-                'ppda_diff': ppda_diff,
                 't_weight': t_weight,
+                'home_adv': home_adv,
                 'result': result,
                 'home_score': s1,
                 'away_score': s2
@@ -99,26 +90,21 @@ def train_v8_models(df, squad_dict, tac_dict):
         elo_dict[t2] = elo2 + k * g * (w2 - we2)
         
     train_df = pd.DataFrame(train_data).fillna(0)
-    features = ['elo_diff', 'sv_diff', 'aerial_diff', 'ppda_diff', 't_weight']
+    features = ['elo_diff', 't_weight', 'home_adv']
     X_train = train_df[features]
     y_train = train_df['result'] + 1 # 0: Loss, 1: Draw, 2: Win
     
-    # Train Model A: Classification (Stacking)
-    xgb_base = xgb.XGBClassifier(objective='multi:softprob', num_class=3, eval_metric='mlogloss', seed=42)
-    rf_base = RandomForestClassifier(n_estimators=100, random_state=42)
-    mlp_base = make_pipeline(StandardScaler(), MLPClassifier(hidden_layer_sizes=(64, 32), max_iter=500, random_state=42))
-    
-    stacking_clf = StackingClassifier(
-        estimators=[('xgb', xgb_base), ('rf', rf_base), ('mlp', mlp_base)],
-        final_estimator=LogisticRegression(), cv=3
-    )
-    calibrated_stack = CalibratedClassifierCV(stacking_clf, method='sigmoid', cv=3)
+    # Train Model A: Classification
+    # Since features are just elo_diff, t_weight, home_adv, a Stacking Ensemble is overkill.
+    # LogisticRegression is ideal for mapping continuous distance (elo_diff) to probability.
+    base_clf = LogisticRegression(max_iter=1000, random_state=42)
+    calibrated_stack = CalibratedClassifierCV(base_clf, method='sigmoid', cv=3)
     calibrated_stack.fit(X_train, y_train)
     
     # Train Model B: xG Predictors (Poisson Regression)
     # Target variables are actual home and away scores
-    xg_model_home = xgb.XGBRegressor(objective='count:poisson', n_estimators=100, learning_rate=0.05, random_state=42)
-    xg_model_away = xgb.XGBRegressor(objective='count:poisson', n_estimators=100, learning_rate=0.05, random_state=42)
+    xg_model_home = xgb.XGBRegressor(objective='reg:tweedie', tweedie_variance_power=1.5, n_estimators=100, learning_rate=0.05, random_state=42)
+    xg_model_away = xgb.XGBRegressor(objective='reg:tweedie', tweedie_variance_power=1.5, n_estimators=100, learning_rate=0.05, random_state=42)
     
     xg_model_home.fit(X_train, train_df['home_score'])
     xg_model_away.fit(X_train, train_df['away_score'])

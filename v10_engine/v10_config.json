@@ -1,0 +1,25 @@
+{
+  "poisson": {
+    "rho": -0.05,
+    "xg_lower_bound": 0.1,
+    "xg_upper_bound": 6.0,
+    "alpha_sv_power": 0.15
+  },
+  "fusion_weights": {
+    "poisson": 0.70,
+    "classification": 0.30
+  },
+  "penalties": {
+    "park_the_bus": 0.70,
+    "biscotto": 0.60,
+    "heat_exhaustion": 0.85,
+    "heavy_rain": 0.85,
+    "nordic_alpine_teams": [
+      "Norway", "Sweden", "Denmark", "Finland", "Iceland", 
+      "Switzerland", "Scotland", "Wales", "Republic of Ireland", "Northern Ireland"
+    ],
+    "superstar_teams": [
+      "Argentina", "France", "Norway", "Portugal", "Brazil", "England", "Spain", "Germany"
+    ]
+  }
+}

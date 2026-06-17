@@ -1,26 +1,17 @@
 import pandas as pd
 import numpy as np
-import xgboost as xgb
-from sklearn.ensemble import StackingClassifier, RandomForestClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
-import math
-from core_model import train_v8_models, get_k_factor
-from sklearn.metrics import brier_score_loss
-
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
+from core_model import train_v8_models, get_k_factor
+from v10_shared import get_zh_name, get_tier, dixon_coles_prob, load_v10_config, get_assigned_referee, map_name
 
-def dixon_coles_prob(l1, l2, k1, k2, rho=0.0):
-    prob = (math.exp(-l1) * (l1 ** k1) / math.factorial(k1)) * (math.exp(-l2) * (l2 ** k2) / math.factorial(k2))
-    if k1 == 0 and k2 == 0: return prob * (1 - l1*l2*rho)
-    elif k1 == 0 and k2 == 1: return prob * (1 + l1*rho)
-    elif k1 == 1 and k2 == 0: return prob * (1 + l2*rho)
-    elif k1 == 1 and k2 == 1: return prob * (1 - rho)
-    return prob
+config = load_v10_config()
+rho_val = config.get("poisson", {}).get("rho", -0.05)
+w_ml = config.get("fusion_weights", {}).get("classification", 0.3)
+w_pois = config.get("fusion_weights", {}).get("poisson", 0.7)
+xg_lb = config.get("poisson", {}).get("xg_lower_bound", 0.1)
+xg_ub = config.get("poisson", {}).get("xg_upper_bound", 6.0)
+alpha_power = config.get("poisson", {}).get("alpha_sv_power", 0.15)
 
 print("Loading V10.0 Pre-Match Ultimate Engine for Blind Backtest...")
 
@@ -36,40 +27,7 @@ squad_dict = dict(zip(squad_vals['team'], squad_vals['squad_value_m']))
 tac_dict = tac_df.set_index('team').to_dict('index')
 ref_dict = ref_df.set_index('name').to_dict('index')
 
-# Mock data for these specific backtest teams to ensure realistic modeling
-custom_sv = {
-    'Mexico': 200, 'South Africa': 40, 'South Korea': 160, 'Czech Republic': 120,
-    'Canada': 180, 'Bosnia and Herzegovina': 80, 'USA': 250, 'Paraguay': 100
-}
-custom_tac = {
-    'Mexico': {"aerial_win_rate": 48.0, "ppda": 10.0},
-    'South Africa': {"aerial_win_rate": 51.0, "ppda": 15.0},
-    'South Korea': {"aerial_win_rate": 45.0, "ppda": 11.0},
-    'Czech Republic': {"aerial_win_rate": 58.0, "ppda": 13.0}, # Tall team
-    'Canada': {"aerial_win_rate": 52.0, "ppda": 11.0},
-    'Bosnia and Herzegovina': {"aerial_win_rate": 56.0, "ppda": 14.0}, # Physical team
-    'USA': {"aerial_win_rate": 50.0, "ppda": 9.0}, # High press
-    'Paraguay': {"aerial_win_rate": 54.0, "ppda": 12.0}
-}
-squad_dict.update(custom_sv)
-tac_dict.update(custom_tac)
-
-name_mapping = {'United States': 'USA', 'Korea Republic': 'South Korea'}
-def map_name(name): return name_mapping.get(name, name)
-
-zh_translation = {
-    'Mexico': '墨西哥', 'South Africa': '南非', 'South Korea': '韩国', 'Czech Republic': '捷克',
-    'Canada': '加拿大', 'Bosnia and Herzegovina': '波黑', 'USA': '美国', 'Paraguay': '巴拉圭',
-    'Germany': '德国', 'Curaçao': '库拉索', 'Ivory Coast': '科特迪瓦', 'Ecuador': '厄瓜多尔',
-    'Netherlands': '荷兰', 'Japan': '日本', 'Sweden': '瑞典', 'Tunisia': '突尼斯',
-    'Qatar': '卡塔尔', 'Switzerland': '瑞士', 'Brazil': '巴西', 'Morocco': '摩洛哥',
-    'Haiti': '海地', 'Scotland': '苏格兰', 'Australia': '澳大利亚', 'Turkey': '土耳其',
-    'Belgium': '比利时', 'Egypt': '埃及', 'Iran': '伊朗', 'New Zealand': '新西兰',
-    'Spain': '西班牙', 'Cape Verde': '佛得角', 'Saudi Arabia': '沙特阿拉伯', 'Uruguay': '乌拉圭',
-    'Argentina': '阿根廷', 'Portugal': '葡萄牙', 'Croatia': '克罗地亚', 'Senegal': '塞内加尔',
-    'France': '法国', 'England': '英格兰'
-}
-def t(name): return zh_translation.get(name, name)
+def t(name): return get_zh_name(name)
 
 global_metrics_data = []
 
@@ -94,11 +52,7 @@ def run_blind_prediction(target_date_str):
     output_md += "> [!IMPORTANT]\n> 本预测文件在生成时，底层切断了所有该日及该日之后的真实数据，确保 Elo 积分和机器学习权重处于**绝对盲测状态 (Blind Test)**，不含任何后见之明。\n\n"
     
     upcoming = df[df['date'] == target_date_str]
-    referees = [
-    "Michael Oliver", "Wilton Sampaio", "Daniele Orsato", "Szymon Marciniak",
-    "Anthony Taylor", "Clement Turpin", "Danny Makkelie", "Slavko Vincic",
-    "Facundo Tello", "Cesar Ramos", "Fernando Rapallini", "Ivan Barton"
-]
+    referees = list(ref_dict.keys())
     
     for _, row in upcoming.iterrows():
         t1, t2 = map_name(row['home_team']), map_name(row['away_team'])
@@ -110,44 +64,53 @@ def run_blind_prediction(target_date_str):
         aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
         ppda_diff = tac1['ppda'] - tac2['ppda']
         
-        assigned_ref = referees[sum(ord(c) for c in t1+t2) % len(referees)]
-        strictness = ref_dict[assigned_ref]['strictness_index']
+        date_str = str(row['date'])[:10]
+        assigned_ref = get_assigned_referee(t1, t2, date_str, referees)
+        strictness = ref_dict.get(assigned_ref, {}).get('strictness_index', 0.5)
+        
+        is_neutral = str(row['neutral']).upper() == 'TRUE' if 'neutral' in row else True
+        is_host = (t1 == row.get('country') or t2 == row.get('country'))
+        home_adv = 1 if (is_host and not is_neutral) else 0
         
         X_pred = pd.DataFrame({
             'elo_diff': [e1 - e2],
-            'sv_diff': [sv1 - sv2],
-            'aerial_diff': [aerial_diff],
-            'ppda_diff': [ppda_diff],
-            't_weight': [get_k_factor(row['tournament'])]
+            't_weight': [get_k_factor(row['tournament'])],
+            'home_adv': [home_adv]
         })
         
         probs = calibrated_stack.predict_proba(X_pred)[0]
         p_away_ml, p_draw_ml, p_home_ml = probs[0], probs[1], probs[2]
         
-        xg1_pred = max(0.1, min(float(xg_model_home.predict(X_pred)[0]), 6.0))
-        xg2_pred = max(0.1, min(float(xg_model_away.predict(X_pred)[0]), 6.0))
+        xg1_base = float(xg_model_home.predict(X_pred)[0])
+        xg2_base = float(xg_model_away.predict(X_pred)[0])
+        
+        sv_ratio_home = sv1 / (sv2 + 1e-5)
+        sv_ratio_away = sv2 / (sv1 + 1e-5)
+        
+        xg1_pred = max(xg_lb, min(xg1_base * (sv_ratio_home ** alpha_power), xg_ub))
+        xg2_pred = max(xg_lb, min(xg2_base * (sv_ratio_away ** alpha_power), xg_ub))
 
         
         # V5 Unified Math: Calculate true W/D/L probabilities from Poisson matrix
-        p_win_poisson, p_draw_poisson, p_loss_poisson = 0.0, 0.0, 0.0
         score_probs_all = []
+        p_home_pois, p_draw_pois, p_away_pois = 0.0, 0.0, 0.0
         for i in range(15):
             for j in range(15):
-                prob = dixon_coles_prob(xg1_pred, xg2_pred, i, j, rho=-0.05)
-                if i > j: p_win_poisson += prob
-                elif i == j: p_draw_poisson += prob
-                else: p_loss_poisson += prob
+                prob = dixon_coles_prob(xg1_pred, xg2_pred, i, j, rho=rho_val)
+                if i > j: p_home_pois += prob
+                elif i == j: p_draw_pois += prob
+                else: p_away_pois += prob
                 if i < 10 and j < 10:
                     score_probs_all.append({"score": f"{i}-{j}", "prob": prob})
                     
-        total_p = p_win_poisson + p_draw_poisson + p_loss_poisson
-        p_win_poisson /= total_p
-        p_draw_poisson /= total_p
-        p_loss_poisson /= total_p
+        total_p = p_home_pois + p_draw_pois + p_away_pois
+        p_home_pois /= total_p
+        p_draw_pois /= total_p
+        p_away_pois /= total_p
         
-        p_home = p_home_ml * 0.3 + p_win_poisson * 0.7
-        p_draw = p_draw_ml * 0.3 + p_draw_poisson * 0.7
-        p_away = p_away_ml * 0.3 + p_loss_poisson * 0.7
+        p_home = p_home_ml * w_ml + p_home_pois * w_pois
+        p_draw = p_draw_ml * w_ml + p_draw_pois * w_pois
+        p_away = p_away_ml * w_ml + p_away_pois * w_pois
         
         score_probs = sorted(score_probs_all, key=lambda x: x["prob"], reverse=True)[:3]
         
@@ -161,14 +124,6 @@ def run_blind_prediction(target_date_str):
         total_xg = xg1_pred + xg2_pred
         ou = round(total_xg / 0.25) * 0.25
         ou_str = f"{ou} 球" if ou % 0.5 == 0 else f"{ou-0.25}/{ou+0.25} 球"
-        
-        # V6.0 Logic: Elo Tiers, Possession, Warnings
-        def get_tier(elo):
-            if elo >= 1900: return "T0-世界顶尖"
-            elif elo >= 1750: return "T1-洲际强队"
-            elif elo >= 1600: return "T2-中坚力量"
-            elif elo >= 1450: return "T3-边缘球队"
-            else: return "T4-送分鱼腩"
         
         sv_ratio = max(sv1, 0.1) / max(sv2, 0.1)
         trap_warning = ""

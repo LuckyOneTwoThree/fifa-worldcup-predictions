@@ -1,11 +1,19 @@
 import pandas as pd
 import numpy as np
-import math
 import sys
 sys.path.insert(0, '.')
-from core_model import train_v8_models, get_k_factor
+from core_model import train_v8_models
+from v10_shared import dixon_coles_prob, load_v10_config, map_name, load_results_csv
 
-df = pd.read_csv('../results.csv')
+config = load_v10_config()
+xg_lb = config.get("poisson", {}).get("xg_lower_bound", 0.1)
+xg_ub = config.get("poisson", {}).get("xg_upper_bound", 6.0)
+rho_val = config.get("poisson", {}).get("rho", -0.05)
+w_ml = config.get("fusion_weights", {}).get("classification", 0.3)
+w_poisson = config.get("fusion_weights", {}).get("poisson", 0.7)
+alpha_power = config.get("poisson", {}).get("alpha_sv_power", 0.15)
+
+df = load_results_csv()
 squad_vals = pd.read_csv('data_scrapers/squad_values.csv')
 tac_df = pd.read_csv('data_scrapers/tactical_styles.csv')
 ref_df = pd.read_csv('data_scrapers/referee_stats.csv')
@@ -14,14 +22,6 @@ df['date'] = pd.to_datetime(df['date'])
 df = df.sort_values('date')
 squad_dict = dict(zip(squad_vals['team'], squad_vals['squad_value_m']))
 tac_dict = tac_df.set_index('team').to_dict('index')
-
-def dixon_coles_prob(l1, l2, k1, k2, rho=0.0):
-    prob = (math.exp(-l1) * (l1 ** k1) / math.factorial(k1)) * (math.exp(-l2) * (l2 ** k2) / math.factorial(k2))
-    if k1 == 0 and k2 == 0: return prob * (1 - l1*l2*rho)
-    elif k1 == 0 and k2 == 1: return prob * (1 + l1*rho)
-    elif k1 == 1 and k2 == 0: return prob * (1 + l2*rho)
-    elif k1 == 1 and k2 == 1: return prob * (1 - rho)
-    return prob
 
 # Test on WC 2022
 wc2022 = df[(df['tournament'] == 'FIFA World Cup') & (df['date'].dt.year == 2022)]
@@ -35,7 +35,7 @@ for target_date in dates:
     
     matches = wc2022[wc2022['date'] == target_date]
     for _, row in matches.iterrows():
-        t1, t2 = row['home_team'], row['away_team']
+        t1, t2 = map_name(row['home_team']), map_name(row['away_team'])
         e1, e2 = elo_dict.get(t1, 1500), elo_dict.get(t2, 1500)
         sv1, sv2 = squad_dict.get(t1, 50), squad_dict.get(t2, 50)
         
@@ -44,23 +44,33 @@ for target_date in dates:
         aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
         ppda_diff = tac1['ppda'] - tac2['ppda']
         
+        is_neutral = str(row['neutral']).upper() == 'TRUE' if 'neutral' in row else True
+        is_host = (t1 == row.get('country') or t2 == row.get('country'))
+        home_adv = 1 if (is_host and not is_neutral) else 0
+        
         X_pred = pd.DataFrame({
-            'elo_diff': [e1 - e2], 'sv_diff': [sv1 - sv2],
-            'aerial_diff': [aerial_diff], 'ppda_diff': [ppda_diff],
-            't_weight': [60]
+            'elo_diff': [e1 - e2],
+            't_weight': [60],
+            'home_adv': [home_adv]
         })
         
         probs = calibrated_stack.predict_proba(X_pred)[0]
         p_away_ml, p_draw_ml, p_home_ml = probs[0], probs[1], probs[2]
         
-        xg1 = max(0.1, min(float(xg_model_home.predict(X_pred)[0]), 6.0))
-        xg2 = max(0.1, min(float(xg_model_away.predict(X_pred)[0]), 6.0))
+        xg1_base = float(xg_model_home.predict(X_pred)[0])
+        xg2_base = float(xg_model_away.predict(X_pred)[0])
+        
+        sv_ratio_home = sv1 / (sv2 + 1e-5)
+        sv_ratio_away = sv2 / (sv1 + 1e-5)
+        
+        xg1 = max(xg_lb, min(xg1_base * (sv_ratio_home ** alpha_power), xg_ub))
+        xg2 = max(xg_lb, min(xg2_base * (sv_ratio_away ** alpha_power), xg_ub))
         
         p_win, p_draw, p_loss = 0.0, 0.0, 0.0
         score_probs = []
         for i in range(15):
             for j in range(15):
-                prob = dixon_coles_prob(xg1, xg2, i, j, rho=-0.05)
+                prob = dixon_coles_prob(xg1, xg2, i, j, rho=rho_val)
                 if i > j: p_win += prob
                 elif i == j: p_draw += prob
                 else: p_loss += prob
@@ -68,9 +78,9 @@ for target_date in dates:
                     score_probs.append({'score': f'{i}-{j}', 'prob': prob})
         
         total_p = p_win + p_draw + p_loss
-        p_home = p_home_ml * 0.3 + (p_win/total_p) * 0.7
-        p_draw_final = p_draw_ml * 0.3 + (p_draw/total_p) * 0.7
-        p_away = p_away_ml * 0.3 + (p_loss/total_p) * 0.7
+        p_home = p_home_ml * w_ml + (p_win/total_p) * w_poisson
+        p_draw_final = p_draw_ml * w_ml + (p_draw/total_p) * w_poisson
+        p_away = p_away_ml * w_ml + (p_loss/total_p) * w_poisson
         
         s1, s2 = int(row['home_score']), int(row['away_score'])
         res = 2 if s1 > s2 else (1 if s1 == s2 else 0)

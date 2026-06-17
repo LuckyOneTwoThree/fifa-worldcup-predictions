@@ -1,35 +1,15 @@
+import os
 import pandas as pd
 import numpy as np
-import xgboost as xgb
-from sklearn.ensemble import StackingClassifier, RandomForestClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.calibration import CalibratedClassifierCV
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import make_pipeline
-import math
-from core_model import get_k_factor
-from v10_shared import load_results_csv, get_zh_name, get_cached_models
+import warnings
+warnings.filterwarnings('ignore')
 
-def dixon_coles_prob(l1, l2, k1, k2, rho=0.0, elo_diff=0.0):
-    prob = (math.exp(-l1) * (l1 ** k1) / math.factorial(k1)) * (math.exp(-l2) * (l2 ** k2) / math.factorial(k2))
-    
-    # Core Dixon Coles adjustment
-    if k1 == 0 and k2 == 0: prob = prob * (1 - l1*l2*rho)
-    elif k1 == 0 and k2 == 1: prob = prob * (1 + l1*rho)
-    elif k1 == 1 and k2 == 0: prob = prob * (1 + l2*rho)
-    elif k1 == 1 and k2 == 1: prob = prob * (1 - rho)
-    
-    # Phase 2: Avalanche Effect removed due to V10 redesign (Park-the-bus resistance replaces this)
-        
-    return prob
+from v10_shared import get_zh_name, get_cached_models, load_results_csv, load_v10_config, get_tier, dixon_coles_prob, get_assigned_referee, map_name
+from core_model import get_k_factor
 
 def get_base_match_info(target_date_str="2026-06-15"):
     df = load_results_csv()
     df = df.sort_values('date')
-
-    name_mapping = {'South Korea': 'South Korea', 'Korea Republic': 'South Korea', 'USA': 'USA', 'United States': 'USA'}
-    def map_name(name): return name_mapping.get(name, name)
 
     upcoming = df[df['date'] == target_date_str].head(4)
     matches = []
@@ -41,30 +21,32 @@ def get_base_match_info(target_date_str="2026-06-15"):
 
 def generate_v10_predictions(target_date_str, impact_dict=None):
     print("Loading V10.0 Pre-Match Ultimate Engine...")
+    config = load_v10_config()
+    poisson_cfg = config.get("poisson", {})
+    fusion_cfg = config.get("fusion_weights", {})
+    penalty_cfg = config.get("penalties", {})
+    
+    rho_val = poisson_cfg.get("rho", -0.05)
+    xg_lb = poisson_cfg.get("xg_lower_bound", 0.1)
+    xg_ub = poisson_cfg.get("xg_upper_bound", 6.0)
+    alpha_power = poisson_cfg.get("alpha_sv_power", 0.15)
+    w_ml = fusion_cfg.get("classification", 0.3)
+    w_pois = fusion_cfg.get("poisson", 0.7)
 
     df = load_results_csv()
-    models = get_cached_models()
-    calibrated_stack, xg_model_home, xg_model_away, elo_dict = models
+    calibrated_stack, xg_model_home, xg_model_away, elo_dict = get_cached_models()
     
-    import os
     base_dir = os.path.dirname(os.path.abspath(__file__))
     squad_vals = pd.read_csv(os.path.join(base_dir, 'data_scrapers/squad_values.csv'))
-    ref_df = pd.read_csv(os.path.join(base_dir, 'data_scrapers/referee_stats.csv'))
     tac_df = pd.read_csv(os.path.join(base_dir, 'data_scrapers/tactical_styles.csv'))
+    ref_df = pd.read_csv(os.path.join(base_dir, 'data_scrapers/referee_stats.csv'))
 
     squad_dict = dict(zip(squad_vals['team'], squad_vals['squad_value_m']))
     tac_dict = tac_df.set_index('team').to_dict('index')
     ref_dict = ref_df.set_index('name').to_dict('index')
-
-    name_mapping = {'South Korea': 'South Korea', 'Korea Republic': 'South Korea', 'USA': 'USA', 'United States': 'USA'}
-    def map_name(name): return name_mapping.get(name, name)
-
-    upcoming = df[df['date'] == target_date_str].head(4)
-    referees = [
-        "Michael Oliver", "Wilton Sampaio", "Daniele Orsato", "Szymon Marciniak",
-        "Anthony Taylor", "Clement Turpin", "Danny Makkelie", "Slavko Vincic",
-        "Facundo Tello", "Cesar Ramos", "Fernando Rapallini", "Ivan Barton"
-    ]
+    referees = list(ref_dict.keys())
+    
+    upcoming = df[df['date'] == target_date_str]
     
     results_dict = {}
     output_md = ""
@@ -84,22 +66,32 @@ def generate_v10_predictions(target_date_str, impact_dict=None):
         aerial_diff = tac1['aerial_win_rate'] - tac2['aerial_win_rate']
         ppda_diff = tac1['ppda'] - tac2['ppda']
         
-        assigned_ref = referees[sum(ord(c) for c in t1_en+t2_en) % len(referees)]
+        date_str = str(row['date'])[:10]
+        assigned_ref = get_assigned_referee(t1_en, t2_en, date_str, referees)
         strictness = ref_dict.get(assigned_ref, {}).get('strictness_index', 0.5)
+        
+        is_neutral = str(row['neutral']).upper() == 'TRUE' if 'neutral' in row else True
+        is_host = (t1_en == row.get('country') or t2_en == row.get('country'))
+        home_adv = 1 if (is_host and not is_neutral) else 0
         
         X_pred = pd.DataFrame({
             'elo_diff': [e1 - e2],
-            'sv_diff': [sv1 - sv2],
-            'aerial_diff': [aerial_diff],
-            'ppda_diff': [ppda_diff],
-            't_weight': [get_k_factor(row['tournament'])]
+            't_weight': [get_k_factor(row['tournament'])],
+            'home_adv': [home_adv]
         })
         
         probs = calibrated_stack.predict_proba(X_pred)[0]
         p_away_ml, p_draw_ml, p_home_ml = probs[0], probs[1], probs[2]
 
-        xg1_pred = max(0.1, min(float(xg_model_home.predict(X_pred)[0]), 6.0))
-        xg2_pred = max(0.1, min(float(xg_model_away.predict(X_pred)[0]), 6.0))
+        xg1_base = float(xg_model_home.predict(X_pred)[0])
+        xg2_base = float(xg_model_away.predict(X_pred)[0])
+        
+        # V10.4 Alpha Injection: Re-apply 2026 Squad Value scaling safely outside the tree models
+        sv_ratio_home = sv1 / (sv2 + 1e-5)
+        sv_ratio_away = sv2 / (sv1 + 1e-5)
+        
+        xg1_pred = xg1_base * (sv_ratio_home ** alpha_power)
+        xg2_pred = xg2_base * (sv_ratio_away ** alpha_power)
 
         if impact_dict is not None:
             match_key = f"{t1} vs {t2}"
@@ -126,21 +118,27 @@ def generate_v10_predictions(target_date_str, impact_dict=None):
                 
             # Phase 4: Geo-Climatic Debuff for Extreme Heat
             if 'Heat' in weather or 'Hot' in weather or '35C' in weather:
-                nordic_alpine_teams = ["Norway", "Sweden", "Denmark", "Finland", "Iceland", "Switzerland", "Scotland", "Wales", "Republic of Ireland", "Northern Ireland"]
-                if t1 in nordic_alpine_teams and fatigue_home >= 5: mult1 *= 0.85  # Severe stamina penalty
-                if t2 in nordic_alpine_teams and fatigue_away >= 5: mult2 *= 0.85
+                nordic_alpine_teams = penalty_cfg.get("nordic_alpine_teams", [])
+                if t1_en in nordic_alpine_teams and fatigue_home >= 5: mult1 *= penalty_cfg.get("heat_exhaustion", 0.85)
+                if t2_en in nordic_alpine_teams and fatigue_away >= 5: mult2 *= penalty_cfg.get("heat_exhaustion", 0.85)
                 
             biscotto_risk = impacts.get("biscotto_risk", "NONE")
             
             # Phase 5: Park-the-Bus Resistance (V10)
+            superstar_teams = penalty_cfg.get("superstar_teams", [])
+            is_home_superstar = (t1_en in superstar_teams) and (fatigue_home >= 5) and (inj_home == 0)
+            is_away_superstar = (t2_en in superstar_teams) and (fatigue_away >= 5) and (inj_away == 0)
+
             elo_diff_raw = e1 - e2
             if elo_diff_raw > 200:
                 # Home is heavy favorite. If away team plays conservative, penalize Home xG.
                 if tac2.get('ppda', 12.0) >= 10.5 or tac2.get('possession_avg', 50) <= 45:
-                    mult1 *= 0.70
+                    if not is_home_superstar:
+                        mult1 *= penalty_cfg.get("park_the_bus", 0.70)
             elif elo_diff_raw < -200:
                 if tac1.get('ppda', 12.0) >= 10.5 or tac1.get('possession_avg', 50) <= 45:
-                    mult2 *= 0.70
+                    if not is_away_superstar:
+                        mult2 *= penalty_cfg.get("park_the_bus", 0.70)
             
             # 1. Extreme low motivation or confirmed biscotto (MD3 High Risk)
             if motivation == "LOW" or biscotto_risk == "HIGH":
@@ -167,13 +165,27 @@ def generate_v10_predictions(target_date_str, impact_dict=None):
             xg1_pred *= mult1
             xg2_pred *= mult2
 
+            # OSINT Probability Shift (V10.3)
+            # Ensure the ML classifier also respects the dynamic OSINT penalties
+            p_home_ml_adj = p_home_ml * mult1
+            p_away_ml_adj = p_away_ml * mult2
+            
+            home_drop = p_home_ml - p_home_ml_adj
+            away_drop = p_away_ml - p_away_ml_adj
+            
+            p_home_ml = p_home_ml_adj + (away_drop * 0.3)
+            p_away_ml = p_away_ml_adj + (home_drop * 0.3)
+            p_draw_ml = p_draw_ml + (home_drop * 0.7) + (away_drop * 0.7)
+
+        # Apply final clipping to ensure xG remains within logical physical bounds
+        xg1_pred = max(xg_lb, min(xg1_pred, xg_ub))
+        xg2_pred = max(xg_lb, min(xg2_pred, xg_ub))
+
         score_probs = []
         p_home_pois, p_draw_pois, p_away_pois = 0.0, 0.0, 0.0
         for i in range(15):
             for j in range(15):
-                # Pass elo_diff for Avalanche Effect
-                elo_diff = elo_dict.get(t1, 1500) - elo_dict.get(t2, 1500)
-                p = dixon_coles_prob(xg1_pred, xg2_pred, i, j, rho=-0.05, elo_diff=elo_diff)
+                p = dixon_coles_prob(xg1_pred, xg2_pred, i, j, rho=rho_val)
                 score_probs.append({'score': f'{i}-{j}', 'prob': p})
                 if i > j: p_home_pois += p
                 elif i == j: p_draw_pois += p
@@ -185,7 +197,10 @@ def generate_v10_predictions(target_date_str, impact_dict=None):
             x['prob'] /= total_prob
         score_probs = sorted(score_probs, key=lambda x: x['prob'], reverse=True)
 
-        w_ml, w_pois = 0.3, 0.7
+        p_home_pois /= total_prob
+        p_draw_pois /= total_prob
+        p_away_pois /= total_prob
+
         p_home = p_home_ml * w_ml + p_home_pois * w_pois
         p_draw = p_draw_ml * w_ml + p_draw_pois * w_pois
         p_away = p_away_ml * w_ml + p_away_pois * w_pois
@@ -209,15 +224,7 @@ def generate_v10_predictions(target_date_str, impact_dict=None):
         p2 = tac2.get('possession_avg', 50.0)
         norm_pos1 = (p1 / (p1 + p2)) * 100
         norm_pos2 = (p2 / (p1 + p2)) * 100
-        
         base_elo1, base_elo2 = e1, e2
-        def get_tier(elo):
-            if elo >= 1900: return "T0-世界顶尖"
-            elif elo >= 1750: return "T1-洲际强队"
-            elif elo >= 1600: return "T2-中坚力量"
-            elif elo >= 1450: return "T3-边缘球队"
-            else: return "T4-送分鱼腩"
-            
         tier1 = get_tier(base_elo1)
         tier2 = get_tier(base_elo2)
         val_home, val_away = sv1, sv2

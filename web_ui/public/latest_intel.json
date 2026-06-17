@@ -1,0 +1,478 @@
+{
+  "葡萄牙 vs 刚果民主共和国": {
+    "match_info": {
+      "p_home": 0.6644941728484721,
+      "p_draw": 0.24024063605676665,
+      "p_away": 0.09526519109476124,
+      "xg_home": 2.1230022437524525,
+      "xg_away": 0.3862842155546953,
+      "ah_num": 2.0,
+      "ah_str": "主让 1.5/2.0 球",
+      "ou_num": 2.5,
+      "ou_str": "2.5 球",
+      "elo_home": 1991.7323687441417,
+      "elo_away": 1770.1403970003553,
+      "tier_home": "T0-世界顶尖",
+      "tier_away": "T1-洲际强队",
+      "sv_home": 1000.0,
+      "sv_away": 50.0,
+      "score_probs": [
+        {
+          "score": "2-0",
+          "prob": 0.18327433464985038
+        },
+        {
+          "score": "1-0",
+          "prob": 0.16932109803387616
+        },
+        {
+          "score": "3-0",
+          "prob": 0.1296972745612901
+        },
+        {
+          "score": "0-0",
+          "prob": 0.08466095949897452
+        },
+        {
+          "score": "2-1",
+          "prob": 0.07079598259152617
+        }
+      ],
+      "referee": "Wilton Sampaio",
+      "strictness": 0.85,
+      "ppda_home": 8.2,
+      "ppda_away": 11.1,
+      "possession_home": 63.4,
+      "possession_away": 50.3,
+      "possession_home_norm": 55.760773966578725,
+      "possession_away_norm": 44.23922603342129,
+      "aerial_diff": 5.800000000000004,
+      "confidence_index": "HIGH"
+    },
+    "impacts": {
+      "weather": "晴/多云，25.6°C，风速 15.3km/h",
+      "injuries_home": 2,
+      "injuries_away": 0,
+      "fatigue_home": 7,
+      "fatigue_away": 8,
+      "motivation_index": "HIGH",
+      "biscotto_risk": "NONE",
+      "_raw_news": {
+        "home_news": [
+          {
+            "date": "2026-05-14T00:00:00+00:00",
+            "title": "马丁内斯: C罗在葡萄牙队中'只是名普通球员'",
+            "body": "罗伯托·马丁内斯解释了当C罗进入国家队环境后，他的巨星地位会发生怎样的变化。这番评论意义重大，因为即使在现阶段，C罗仍是世界足坛最大的招牌之一...",
+            "url": "https://sports.yahoo.com/articles/cristiano-ronaldo-just-football-player-180000106.html",
+            "image": "",
+            "source": "Yahoo! Sports"
+          },
+          {
+            "date": "2026-03-20T13:56:35+00:00",
+            "title": "葡萄牙在对阵美国网友谊赛前宣布关于C罗的伤情更新",
+            "body": "C罗在葡萄牙国家队三月份的友谊赛前尚未达到比赛体能状态。",
+            "url": "https://www.msn.com/en-us/sports/soccer/portugal-announce-cristiano-ronaldo-news-amid-injury-concerns-before-usmnt-game/ar-AA1Z3Buk",
+            "image": "",
+            "source": "Athlon Sports"
+          }
+        ],
+        "away_news": [
+          {
+            "title": "内部情报：刚果（金）动态",
+            "body": "战术泄露表明，刚果（金）可能会在这场关键战役中改用三后卫阵型。"
+          },
+          {
+            "title": "战术雷达：刚果（金）",
+            "body": "刚果（金）全队正在进行封闭的定位球高强度演练。"
+          }
+        ],
+        "weather": "晴/多云，25.6°C，风速 15.3km/h"
+      },
+      "_raw_fatigue": {
+        "home_rest_days": 7,
+        "away_rest_days": 8,
+        "fatigue_warning": "NORMAL"
+      },
+      "_raw_gt": {
+        "motivation_index": "HIGH",
+        "biscotto_risk": "NONE",
+        "analysis": "World Cup Group Stage (MD1/MD2). Both 葡萄牙 and DR Congo are fighting for points. No biscotto risk."
+      }
+    },
+    "odds": {
+      "data_source": "ODDS_API_KEY not set. Graceful Degradation to V10 Theoretical Odds.",
+      "market_implied_probs": {
+        "home": 0.6644941728484721,
+        "draw": 0.24024063605676665,
+        "away": 0.09526519109476124
+      },
+      "v8_probs": {
+        "home": 0.6644941728484721,
+        "draw": 0.24024063605676665,
+        "away": 0.09526519109476124
+      },
+      "value_analysis": {
+        "best_value_bet": "Portugal (Home)",
+        "edge": "No Edge"
+      }
+    },
+    "referee": {
+      "referee": "Wilton Sampaio",
+      "strictness": 0.85,
+      "home_foul_risk": "HIGH (Red Card / Penalty Risk)",
+      "away_foul_risk": "LOW",
+      "micro_analysis": "Wilton Sampaio is highly strict (Index: 0.85). Teams that rely on aggressive tactical fouling will be heavily penalized."
+    }
+  },
+  "乌兹别克斯坦 vs 哥伦比亚": {
+    "match_info": {
+      "p_home": 0.0983667085589963,
+      "p_draw": 0.17646839505052567,
+      "p_away": 0.725164896390478,
+      "xg_home": 0.5512865763851477,
+      "xg_away": 2.4395259648675505,
+      "ah_num": -2.0,
+      "ah_str": "受让 2.0 球",
+      "ou_num": 3.0,
+      "ou_str": "3.0 球",
+      "elo_home": 1839.7118522240598,
+      "elo_away": 2031.493971440902,
+      "tier_home": "T1-洲际强队",
+      "tier_away": "T0-世界顶尖",
+      "sv_home": 30.0,
+      "sv_away": 180.0,
+      "score_probs": [
+        {
+          "score": "0-2",
+          "prob": 0.14951595287080835
+        },
+        {
+          "score": "0-3",
+          "prob": 0.12158268306341662
+        },
+        {
+          "score": "0-1",
+          "prob": 0.11919909693606949
+        },
+        {
+          "score": "1-2",
+          "prob": 0.08242613777311102
+        },
+        {
+          "score": "0-4",
+          "prob": 0.07415102805286675
+        }
+      ],
+      "referee": "Anthony Taylor",
+      "strictness": 0.5,
+      "ppda_home": 11.5,
+      "ppda_away": 9.2,
+      "possession_home": 51.8,
+      "possession_away": 53.7,
+      "possession_home_norm": 49.099526066350705,
+      "possession_away_norm": 50.900473933649295,
+      "aerial_diff": 2.4000000000000057,
+      "confidence_index": "HIGH"
+    },
+    "impacts": {
+      "weather": "晴/多云，16.9°C，风速 2.2km/h",
+      "injuries_home": 0,
+      "injuries_away": 0,
+      "fatigue_home": 9,
+      "fatigue_away": 10,
+      "motivation_index": "HIGH",
+      "biscotto_risk": "NONE",
+      "_raw_news": {
+        "home_news": [
+          {
+            "title": "内部情报：乌兹别克斯坦动态",
+            "body": "医疗团队批准乌兹别克斯坦首发前锋出战，但上场时间可能被限制在60分钟内。"
+          },
+          {
+            "title": "战术雷达：乌兹别克斯坦",
+            "body": "战术泄露表明，乌兹别克斯坦可能会在这场关键战役中改用三后卫阵型。"
+          }
+        ],
+        "away_news": [
+          {
+            "title": "内部情报：哥伦比亚动态",
+            "body": "哥伦比亚队长发表动员演讲，全队士气高涨且空前团结。"
+          },
+          {
+            "title": "战术雷达：哥伦比亚",
+            "body": "关于哥伦比亚阵营食物中毒的传闻已被足协官方辟谣。"
+          }
+        ],
+        "weather": "晴/多云，16.9°C，风速 2.2km/h"
+      },
+      "_raw_fatigue": {
+        "home_rest_days": 9,
+        "away_rest_days": 10,
+        "fatigue_warning": "NORMAL"
+      },
+      "_raw_gt": {
+        "motivation_index": "HIGH",
+        "biscotto_risk": "NONE",
+        "analysis": "World Cup Group Stage (MD1/MD2). Both Uzbekistan and Colombia are fighting for points. No biscotto risk."
+      }
+    },
+    "odds": {
+      "data_source": "ODDS_API_KEY not set. Graceful Degradation to V10 Theoretical Odds.",
+      "market_implied_probs": {
+        "home": 0.09836670855899633,
+        "draw": 0.1764683950505257,
+        "away": 0.7251648963904781
+      },
+      "v8_probs": {
+        "home": 0.0983667085589963,
+        "draw": 0.17646839505052567,
+        "away": 0.725164896390478
+      },
+      "value_analysis": {
+        "best_value_bet": "Uzbekistan (Home)",
+        "edge": "No Edge"
+      }
+    },
+    "referee": {
+      "referee": "Anthony Taylor",
+      "strictness": 0.5,
+      "home_foul_risk": "LOW",
+      "away_foul_risk": "LOW",
+      "micro_analysis": "Referee is relatively lenient or teams don't press aggressively."
+    }
+  },
+  "英格兰 vs 克罗地亚": {
+    "match_info": {
+      "p_home": 0.6739768283781568,
+      "p_draw": 0.19800412900170702,
+      "p_away": 0.12801904262013633,
+      "xg_home": 2.24580145113592,
+      "xg_away": 0.6932783893392456,
+      "ah_num": 1.5,
+      "ah_str": "主让 1.5 球",
+      "ou_num": 3.0,
+      "ou_str": "3.0 球",
+      "elo_home": 2102.1390902477883,
+      "elo_away": 1986.57756377357,
+      "tier_home": "T0-世界顶尖",
+      "tier_away": "T0-世界顶尖",
+      "sv_home": 1500.0,
+      "sv_away": 300.0,
+      "score_probs": [
+        {
+          "score": "2-0",
+          "prob": 0.13344016539749234
+        },
+        {
+          "score": "1-0",
+          "prob": 0.11471593464804423
+        },
+        {
+          "score": "3-0",
+          "prob": 0.09989337236316846
+        },
+        {
+          "score": "2-1",
+          "prob": 0.09251118293993602
+        },
+        {
+          "score": "1-1",
+          "prob": 0.08650519130958914
+        }
+      ],
+      "referee": "Danny Makkelie",
+      "strictness": 0.42,
+      "ppda_home": 11.0,
+      "ppda_away": 11.7,
+      "possession_home": 55.2,
+      "possession_away": 55.0,
+      "possession_home_norm": 50.0907441016334,
+      "possession_away_norm": 49.9092558983666,
+      "aerial_diff": 7.299999999999997,
+      "confidence_index": "HIGH"
+    },
+    "impacts": {
+      "weather": "晴/多云，26.9°C，风速 24.1km/h",
+      "injuries_home": 0,
+      "injuries_away": 0,
+      "fatigue_home": 7,
+      "fatigue_away": 10,
+      "motivation_index": "HIGH",
+      "biscotto_risk": "NONE",
+      "_raw_news": {
+        "home_news": [
+          {
+            "title": "内部情报：英格兰动态",
+            "body": "关于英格兰阵营食物中毒的传闻已被足协官方辟谣。"
+          },
+          {
+            "title": "战术雷达：英格兰",
+            "body": "英格兰全队正在进行封闭的定位球高强度演练。"
+          }
+        ],
+        "away_news": [
+          {
+            "title": "内部情报：克罗地亚动态",
+            "body": "战术泄露表明，克罗地亚可能会在这场关键战役中改用三后卫阵型。"
+          },
+          {
+            "title": "战术雷达：克罗地亚",
+            "body": "关于克罗地亚阵营食物中毒的传闻已被足协官方辟谣。"
+          }
+        ],
+        "weather": "晴/多云，26.9°C，风速 24.1km/h"
+      },
+      "_raw_fatigue": {
+        "home_rest_days": 7,
+        "away_rest_days": 10,
+        "fatigue_warning": "NORMAL"
+      },
+      "_raw_gt": {
+        "motivation_index": "HIGH",
+        "biscotto_risk": "NONE",
+        "analysis": "World Cup Group Stage (MD1/MD2). Both 英格兰 and 克罗地亚 are fighting for points. No biscotto risk."
+      }
+    },
+    "odds": {
+      "data_source": "ODDS_API_KEY not set. Graceful Degradation to V10 Theoretical Odds.",
+      "market_implied_probs": {
+        "home": 0.6739768283781568,
+        "draw": 0.19800412900170702,
+        "away": 0.12801904262013633
+      },
+      "v8_probs": {
+        "home": 0.6739768283781568,
+        "draw": 0.19800412900170702,
+        "away": 0.12801904262013633
+      },
+      "value_analysis": {
+        "best_value_bet": "England (Home)",
+        "edge": "No Edge"
+      }
+    },
+    "referee": {
+      "referee": "Danny Makkelie",
+      "strictness": 0.42,
+      "home_foul_risk": "LOW",
+      "away_foul_risk": "LOW",
+      "micro_analysis": "Referee is relatively lenient or teams don't press aggressively."
+    }
+  },
+  "加纳 vs 巴拿马": {
+    "match_info": {
+      "p_home": 0.20905993329645098,
+      "p_draw": 0.2707844315140076,
+      "p_away": 0.5201556351895414,
+      "xg_home": 0.9048620407451466,
+      "xg_away": 1.5468329899176512,
+      "ah_num": -1.0,
+      "ah_str": "受让 0.5/1.0 球",
+      "ou_num": 2.5,
+      "ou_str": "2.5 球",
+      "elo_home": 1670.119507399077,
+      "elo_away": 1801.1788364821575,
+      "tier_home": "T2-中坚力量",
+      "tier_away": "T1-洲际强队",
+      "sv_home": 150.0,
+      "sv_away": 40.0,
+      "score_probs": [
+        {
+          "score": "0-1",
+          "prob": 0.12722680105171374
+        },
+        {
+          "score": "1-1",
+          "prob": 0.12660692814780172
+        },
+        {
+          "score": "0-2",
+          "prob": 0.10306215827736297
+        },
+        {
+          "score": "1-2",
+          "prob": 0.09325703486245396
+        },
+        {
+          "score": "0-0",
+          "prob": 0.09217634147169392
+        }
+      ],
+      "referee": "Clement Turpin",
+      "strictness": 0.4,
+      "ppda_home": 11.6,
+      "ppda_away": 11.9,
+      "possession_home": 54.0,
+      "possession_away": 50.0,
+      "possession_home_norm": 51.92307692307693,
+      "possession_away_norm": 48.07692307692308,
+      "aerial_diff": 0.8999999999999986,
+      "confidence_index": "MEDIUM"
+    },
+    "impacts": {
+      "weather": "晴/多云，16.8°C，风速 10.1km/h",
+      "injuries_home": 2,
+      "injuries_away": 0,
+      "fatigue_home": 15,
+      "fatigue_away": 11,
+      "motivation_index": "HIGH",
+      "biscotto_risk": "NONE",
+      "_raw_news": {
+        "home_news": [
+          {
+            "title": "内部情报：加纳动态",
+            "body": "当地媒体猛烈批评加纳在上一场比赛中暴露出的防守漏洞。"
+          },
+          {
+            "title": "战术雷达：加纳",
+            "body": "加纳核心中场因腿筋紧绷缺席了今天的训练课。"
+          }
+        ],
+        "away_news": [
+          {
+            "title": "内部情报：巴拿马动态",
+            "body": "关于巴拿马阵营食物中毒的传闻已被足协官方辟谣。"
+          },
+          {
+            "title": "战术雷达：巴拿马",
+            "body": "巴拿马全队正在进行封闭的定位球高强度演练。"
+          }
+        ],
+        "weather": "晴/多云，16.8°C，风速 10.1km/h"
+      },
+      "_raw_fatigue": {
+        "home_rest_days": 15,
+        "away_rest_days": 11,
+        "fatigue_warning": "NORMAL"
+      },
+      "_raw_gt": {
+        "motivation_index": "HIGH",
+        "biscotto_risk": "NONE",
+        "analysis": "World Cup Group Stage (MD1/MD2). Both Ghana and Panama are fighting for points. No biscotto risk."
+      }
+    },
+    "odds": {
+      "data_source": "ODDS_API_KEY not set. Graceful Degradation to V10 Theoretical Odds.",
+      "market_implied_probs": {
+        "home": 0.209059933296451,
+        "draw": 0.27078443151400766,
+        "away": 0.5201556351895416
+      },
+      "v8_probs": {
+        "home": 0.20905993329645098,
+        "draw": 0.2707844315140076,
+        "away": 0.5201556351895414
+      },
+      "value_analysis": {
+        "best_value_bet": "Ghana (Home)",
+        "edge": "No Edge"
+      }
+    },
+    "referee": {
+      "referee": "Clement Turpin",
+      "strictness": 0.4,
+      "home_foul_risk": "LOW",
+      "away_foul_risk": "LOW",
+      "micro_analysis": "Referee is relatively lenient or teams don't press aggressively."
+    }
+  }
+}
